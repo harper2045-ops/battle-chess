@@ -71,12 +71,45 @@ button {
 }
 
 .game-controls,
-.difficulty-controls {
+.difficulty-controls,
+.color-controls,
+.export-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 10px;
+}
+
+.bot-options {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 18px;
+}
+
+.color-controls span {
+  color: #b8b8ca;
+  font-size: 0.85rem;
+}
+
+.color-controls button[aria-pressed='true'] {
+  border-color: #ffd45a;
+  background: #685312;
+  color: white;
+}
+
+.export-controls {
+  min-height: 40px;
+  margin: -10px 0 10px;
+}
+
+.export-controls span {
+  min-width: 8em;
+  color: #b8b8ca;
+  font-size: 0.82rem;
+  text-align: left;
 }
 
 .game-controls {
