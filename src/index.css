@@ -54,6 +54,260 @@ body {
   margin: 0;
 }
 
+button {
+  font: inherit;
+}
+
+.game-shell {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: white;
+  background: radial-gradient(circle at top, #242449, #090910);
+  font-family: system-ui, sans-serif;
+}
+
+.game-controls,
+.difficulty-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.game-controls {
+  margin: 20px 0;
+}
+
+.game-status {
+  min-height: 1.25em;
+  color: white;
+  transition: color 160ms ease, text-shadow 160ms ease;
+}
+
+.game-status--check {
+  color: #ffd45a;
+  text-shadow: 0 0 18px rgb(255 178 36 / 55%);
+}
+
+.game-status--checkmate {
+  color: #ff7b69;
+  text-shadow: 0 0 22px rgb(255 52 52 / 65%);
+}
+
+.battle-banner {
+  width: min(90vw, 680px);
+  min-height: 72px;
+  box-sizing: border-box;
+  margin: 6px 0 14px;
+  padding: 10px 18px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 12px;
+  background: linear-gradient(110deg, rgb(25 26 48 / 90%), rgb(56 34 36 / 90%));
+  box-shadow: inset 0 1px rgb(255 255 255 / 8%);
+}
+
+.battle-banner__event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px 10px;
+  animation: battle-report 420ms ease-out both;
+}
+
+.battle-banner__label {
+  width: 100%;
+  color: #d7a651;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.battle-banner__route,
+.battle-banner__idle {
+  color: #b8b8ca;
+  font-size: 0.88rem;
+}
+
+.chess-board {
+  width: min(92vw, 680px);
+  aspect-ratio: 1 / 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  border: 10px solid #3a2b20;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 18px 55px rgb(0 0 0 / 60%);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.chess-board--check {
+  border-color: #9a651f;
+  box-shadow: 0 0 28px rgb(255 166 35 / 38%), 0 18px 55px rgb(0 0 0 / 60%);
+  animation: check-warning 700ms ease-in-out 2;
+}
+
+.chess-board--checkmate {
+  border-color: #982f2f;
+  box-shadow: 0 0 34px rgb(255 45 45 / 48%), 0 18px 55px rgb(0 0 0 / 60%);
+}
+
+.board-square {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  font-size: clamp(30px, 7vw, 62px);
+  cursor: pointer;
+  user-select: none;
+}
+
+.board-square:focus-visible {
+  z-index: 2;
+  outline: 4px solid #fff3a3;
+  outline-offset: -4px;
+}
+
+.board-square:disabled {
+  cursor: default;
+}
+
+.legal-move-dot {
+  position: absolute;
+  width: 22%;
+  height: 22%;
+  border-radius: 50%;
+  background: rgb(20 25 20 / 40%);
+}
+
+.capture-target {
+  position: absolute;
+  inset: 5px;
+  border: 3px solid rgb(255 255 255 / 75%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.battle-impact {
+  position: absolute;
+  inset: 7%;
+  border: 4px solid #ffe59a;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: capture-impact 520ms ease-out both;
+}
+
+.captured-pieces {
+  width: min(90vw, 680px);
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.captured-army {
+  min-height: 58px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 6%);
+}
+
+.captured-army__label {
+  color: #b8b8ca;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.captured-army__pieces {
+  min-height: 1.4em;
+  font-size: 1.45rem;
+  letter-spacing: 0.03em;
+}
+
+.match-details {
+  width: min(90vw, 680px);
+  margin-top: 18px;
+  text-align: left;
+}
+
+@keyframes capture-impact {
+  0% {
+    opacity: 1;
+    transform: scale(0.25);
+    background: rgb(255 226 120 / 65%);
+  }
+  55% {
+    opacity: 0.85;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+}
+
+@keyframes battle-report {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes check-warning {
+  50% {
+    filter: brightness(1.16);
+  }
+}
+
+@media (max-width: 600px) {
+  .game-shell {
+    padding: 16px 10px 24px;
+  }
+
+  .battle-banner {
+    min-height: 64px;
+  }
+
+  .captured-pieces {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battle-banner__event,
+  .battle-impact,
+  .chess-board--check {
+    animation: none;
+  }
+
+  .battle-impact {
+    opacity: 0.8;
+    border-style: double;
+  }
+}
+
 #root {
   width: 1126px;
   max-width: 100%;

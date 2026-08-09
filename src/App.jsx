@@ -1,6 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Chess } from 'chess.js'
-import { getStockfishMove } from './engine/stockfishEngine'
+import {
+  createCaptureEvent,
+  getCapturedPieces,
+  getPositionFeedback,
+} from './battle/battleEvents.js'
+import {
+  BattleBanner,
+  CapturedPieces,
+} from './components/BattlePresentation.jsx'
+import { getStockfishMove } from './engine/stockfishEngine.js'
+
 const pieceSymbols = {
   p: '♟',
   n: '♞',
@@ -15,31 +25,64 @@ const pieceSymbols = {
   Q: '♕',
   K: '♔',
 }
+
+const depthMap = {
+  easy: 5,
+  medium: 10,
+  hard: 15,
+}
+
 export default function App() {
   const chess = useMemo(() => new Chess(), [])
-
-  const [difficulty, setDifficulty] = useState('medium')
-
-
+  const gameVersion = useRef(0)
+  const botTimer = useRef(null)
+  const battleId = useRef(0)
   const [, refresh] = useState(0)
+  const [difficulty, setDifficulty] = useState('medium')
   const [selected, setSelected] = useState(null)
   const [legalMoves, setLegalMoves] = useState([])
   const [mode, setMode] = useState('human')
   const [thinking, setThinking] = useState(false)
   const [history, setHistory] = useState([])
+  const [battleEvent, setBattleEvent] = useState(null)
 
   const board = chess.board()
+  const captured = getCapturedPieces(chess.history({ verbose: true }))
+  const feedback = getPositionFeedback(chess)
+
+  useEffect(
+    () => () => {
+      gameVersion.current += 1
+      clearTimeout(botTimer.current)
+    },
+    [],
+  )
 
   const squareFromCoords = (row, col) =>
     String.fromCharCode(97 + col) + (8 - row)
 
   const updateScreen = () => {
-    refresh((n) => n + 1)
+    refresh((number) => number + 1)
   }
 
   const clearSelection = () => {
     setSelected(null)
     setLegalMoves([])
+  }
+
+  const invalidateBotMove = () => {
+    gameVersion.current += 1
+    clearTimeout(botTimer.current)
+    botTimer.current = null
+  }
+
+  const recordMove = (move) => {
+    setHistory((oldHistory) => [...oldHistory, move.san])
+
+    const event = createCaptureEvent(move, ++battleId.current)
+    if (event) setBattleEvent(event)
+
+    updateScreen()
   }
 
   const selectPiece = (square) => {
@@ -48,54 +91,53 @@ export default function App() {
     if (!piece || piece.color !== chess.turn()) return
 
     setSelected(square)
-
-    const moves = chess.moves({
-      square,
-      verbose: true,
-    })
-
-    setLegalMoves(moves.map((move) => move.to))
-  }
-
-const makeBotMove = async () => {
-  if (mode !== 'bot' || chess.isGameOver()) return
-
-  setThinking(true)
-
-  try {
-const depthMap = {
-  easy: 5,
-  medium: 10,
-  hard: 15,
-}
-
-const bestMove = await getStockfishMove(
-  chess.fen(),
-  depthMap[difficulty]
+    setLegalMoves(
+      chess.moves({ square, verbose: true }).map((move) => move.to),
     )
-
-    const from = bestMove.slice(0, 2)
-    const to = bestMove.slice(2, 4)
-
-    const promotion =
-      bestMove.length > 4 ? bestMove[4] : 'q'
-
-    const result = chess.move({
-      from,
-      to,
-      promotion,
-    })
-
-    if (result) {
-      setHistory((old) => [...old, result.san])
-      updateScreen()
-    }
-  } catch (error) {
-    console.error('Stockfish error:', error)
   }
 
-  setThinking(false)
-}
+  const makeBotMove = async (requestVersion) => {
+    if (
+      requestVersion !== gameVersion.current ||
+      mode !== 'bot' ||
+      chess.isGameOver()
+    ) {
+      return
+    }
+
+    setThinking(true)
+
+    try {
+      const bestMove = await getStockfishMove(
+        chess.fen(),
+        depthMap[difficulty],
+      )
+
+      if (requestVersion !== gameVersion.current) return
+
+      const result = chess.move({
+        from: bestMove.slice(0, 2),
+        to: bestMove.slice(2, 4),
+        promotion: bestMove.length > 4 ? bestMove[4] : 'q',
+      })
+
+      if (result) recordMove(result)
+    } catch (error) {
+      if (requestVersion === gameVersion.current) {
+        console.error('Stockfish error:', error)
+      }
+    } finally {
+      if (requestVersion === gameVersion.current) setThinking(false)
+    }
+  }
+
+  const scheduleBotMove = () => {
+    const requestVersion = gameVersion.current
+    botTimer.current = setTimeout(
+      () => makeBotMove(requestVersion),
+      100,
+    )
+  }
 
   const handleClick = (row, col) => {
     if (thinking || chess.isGameOver()) return
@@ -105,16 +147,11 @@ const bestMove = await getStockfishMove(
 
     if (!selected) {
       if (mode === 'bot' && chess.turn() === 'b') return
-
       selectPiece(square)
       return
     }
 
-    if (
-      piece &&
-      piece.color === chess.turn() &&
-      square !== selected
-    ) {
+    if (piece && piece.color === chess.turn() && square !== selected) {
       selectPiece(square)
       return
     }
@@ -131,16 +168,11 @@ const bestMove = await getStockfishMove(
         return
       }
 
-      setHistory((old) => [...old, move.san])
       clearSelection()
-      updateScreen()
+      recordMove(move)
 
-      if (
-        mode === 'bot' &&
-        chess.turn() === 'b' &&
-        !chess.isGameOver()
-      ) {
-        setTimeout(makeBotMove, 100)
+      if (mode === 'bot' && chess.turn() === 'b' && !chess.isGameOver()) {
+        scheduleBotMove()
       }
     } catch (error) {
       console.warn(error)
@@ -149,243 +181,137 @@ const bestMove = await getStockfishMove(
   }
 
   const resetGame = () => {
+    invalidateBotMove()
     chess.reset()
     clearSelection()
     setHistory([])
+    setBattleEvent(null)
     setThinking(false)
     updateScreen()
   }
 
   const changeMode = (newMode) => {
+    invalidateBotMove()
     chess.reset()
     setMode(newMode)
     clearSelection()
     setHistory([])
+    setBattleEvent(null)
     setThinking(false)
     updateScreen()
   }
 
   const status = () => {
     if (chess.isCheckmate()) {
-      return `CHECKMATE — ${
-        chess.turn() === 'w' ? 'Black' : 'White'
-      } wins`
+      return `CHECKMATE — ${chess.turn() === 'w' ? 'Black' : 'White'} wins`
     }
-
     if (chess.isDraw()) return 'DRAW'
-
     if (chess.inCheck()) {
-      return `${
-        chess.turn() === 'w' ? 'White' : 'Black'
-      } is in CHECK`
+      return `${chess.turn() === 'w' ? 'White' : 'Black'} is in CHECK`
     }
-
-    return `${
-      chess.turn() === 'w' ? 'White' : 'Black'
-    } to move`
+    return `${chess.turn() === 'w' ? 'White' : 'Black'} to move`
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background:
-          'radial-gradient(circle at top, #242449, #090910)',
-        color: 'white',
-        padding: 24,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        fontFamily: 'system-ui',
-      }}
-    >
+    <main className="game-shell">
       <h1>⚔️ BATTLE CHESS</h1>
-
       <p>Real chess underneath. A cinematic war game on top.</p>
 
-      <div
-        style={{
-          display: 'flex',
-          gap: 10,
-          marginBottom: 20,
-        }}
-      >
-        <button onClick={() => changeMode('human')}>
-          Human vs Human
-        </button>
+      <div className="game-controls">
+        <button onClick={() => changeMode('human')}>Human vs Human</button>
+        <button onClick={() => changeMode('bot')}>Human vs Bot</button>
+        <button onClick={resetGame}>Reset Match</button>
 
-        <button onClick={() => changeMode('bot')}>
-          Human vs Bot
-        </button>
-
-        <button onClick={resetGame}>
-          Reset Match
-        </button>
         {mode === 'bot' && (
-  <div
-    style={{
-      display: 'flex',
-      gap: 10,
-      marginBottom: 16,
-    }}
-  >
-    <button
-      onClick={() => setDifficulty('easy')}
-      style={difficultyButtonStyle(difficulty === 'easy')}
-    >
-      Easy
-    </button>
-
-    <button
-      onClick={() => setDifficulty('medium')}
-      style={difficultyButtonStyle(difficulty === 'medium')}
-    >
-      Medium
-    </button>
-
-    <button
-      onClick={() => setDifficulty('hard')}
-      style={difficultyButtonStyle(difficulty === 'hard')}
-    >
-      Hard
-    </button>
-  </div>
-)}
-      </div>
-
-      <h2>
-        {thinking ? '🤖 Bot thinking...' : status()}
-      </h2>
-
-    <div
-  style={{
-    width: 'min(92vw, 680px)',
-    aspectRatio: '1 / 1',
-    display: 'grid',
-    gridTemplateColumns: 'repeat(8, 1fr)',
-    gridTemplateRows: 'repeat(8, 1fr)',
-    border: '10px solid #3a2b20',
-    borderRadius: 12,
-    overflow: 'hidden',
-    boxShadow: '0 18px 55px rgba(0, 0, 0, 0.6)',
-  }}
->
-        {board.map((row, rowIndex) =>
-          row.map((piece, colIndex) => {
-            const square = squareFromCoords(
-              rowIndex,
-              colIndex
-            )
-
-            const light =
-              (rowIndex + colIndex) % 2 === 0
-
-            const legal = legalMoves.includes(square)
-            const selectedSquare = selected === square
-
-  const targetPiece = chess.get(square)
-
-const capture =
-  legal &&
-  targetPiece &&
-  selected &&
-  chess.get(selected)?.color !== targetPiece.color
-
-let background = light
-  ? '#d8bd86'
-  : '#755038'
-
-if (selectedSquare) {
-  background = '#d6a900'
-} else if (capture) {
-  background = '#a83b3b'
-} else if (legal) {
-  background = '#63895b'
-}
-
-            let symbol = ''
-
-            if (piece) {
-              const key =
-                piece.color === 'w'
-                  ? piece.type.toUpperCase()
-                  : piece.type
-
-              symbol = pieceSymbols[key]
-            }
-
-            return (
+          <div className="difficulty-controls" aria-label="Bot difficulty">
+            {Object.keys(depthMap).map((level) => (
               <button
-                key={square}
-                onClick={() =>
-                  handleClick(rowIndex, colIndex)
-                }
-style={{
-  border: 'none',
-  padding: 0,
-  margin: 0,
-  background,
-  fontSize: 'clamp(30px, 7vw, 62px)',
-  cursor:
-    thinking || chess.isGameOver()
-      ? 'default'
-      : 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  position: 'relative',
-  userSelect: 'none',
-}}
+                aria-pressed={difficulty === level}
+                key={level}
+                onClick={() => setDifficulty(level)}
+                style={difficultyButtonStyle(difficulty === level)}
               >
-                {symbol}
-                {legal && !piece && (
-  <div
-    style={{
-      width: '22%',
-      height: '22%',
-      borderRadius: '50%',
-      background: 'rgba(20, 25, 20, 0.4)',
-      position: 'absolute',
-    }}
-  />
-)}
-
-{capture && (
-  <div
-    style={{
-      position: 'absolute',
-      inset: 5,
-      border: '3px solid rgba(255,255,255,0.75)',
-      borderRadius: '50%',
-      pointerEvents: 'none',
-    }}
-  />
-)}
+                {level[0].toUpperCase() + level.slice(1)}
               </button>
-            )
-          })
+            ))}
+          </div>
         )}
       </div>
 
+      <h2 className={`game-status game-status--${feedback}`} aria-live="polite">
+        {thinking ? '🤖 Bot thinking...' : status()}
+      </h2>
+
+      <BattleBanner event={battleEvent} />
+
       <div
-        style={{
-          width: 'min(90vw, 680px)',
-          marginTop: 20,
-        }}
+        className={`chess-board chess-board--${feedback}`}
+        aria-label="Chess board"
       >
-        <strong>Selected:</strong>{' '}
-        {selected
-          ? selected.toUpperCase()
-          : 'None'}
+        {board.map((row, rowIndex) =>
+          row.map((piece, colIndex) => {
+            const square = squareFromCoords(rowIndex, colIndex)
+            const light = (rowIndex + colIndex) % 2 === 0
+            const legal = legalMoves.includes(square)
+            const selectedSquare = selected === square
+            const targetPiece = chess.get(square)
+            const capture =
+              legal &&
+              targetPiece &&
+              selected &&
+              chess.get(selected)?.color !== targetPiece.color
+            let background = light ? '#d8bd86' : '#755038'
 
-        <h3>Move History</h3>
+            if (selectedSquare) background = '#d6a900'
+            else if (capture) background = '#a83b3b'
+            else if (legal) background = '#63895b'
 
-        {history.length
-          ? history.join('  ')
-          : 'No moves yet'}
+            let symbol = ''
+            if (piece) {
+              const key =
+                piece.color === 'w' ? piece.type.toUpperCase() : piece.type
+              symbol = pieceSymbols[key]
+            }
+
+            const impact =
+              battleEvent?.type === 'capture' && battleEvent.to === square
+
+            return (
+              <button
+                aria-label={`${square.toUpperCase()}${piece ? ` ${piece.color === 'w' ? 'White' : 'Black'} piece` : ''}`}
+                className="board-square"
+                disabled={thinking || chess.isGameOver()}
+                key={square}
+                onClick={() => handleClick(rowIndex, colIndex)}
+                style={{ background }}
+              >
+                {symbol}
+                {legal && !piece && <span className="legal-move-dot" />}
+                {capture && <span className="capture-target" />}
+                {impact && (
+                  <span
+                    aria-hidden="true"
+                    className="battle-impact"
+                    key={battleEvent.id}
+                  />
+                )}
+              </button>
+            )
+          }),
+        )}
       </div>
-    </div>
+
+      <CapturedPieces captured={captured} />
+
+      <section className="match-details">
+        <strong>Selected:</strong> {selected ? selected.toUpperCase() : 'None'}
+        <h3>Move History</h3>
+        <p>{history.length ? history.join('  ') : 'No moves yet'}</p>
+      </section>
+    </main>
   )
+}
+
 function difficultyButtonStyle(active) {
   return {
     border: active
@@ -393,11 +319,9 @@ function difficultyButtonStyle(active) {
       : '1px solid rgba(255,255,255,0.25)',
     borderRadius: 8,
     padding: '8px 14px',
-    background: active
-      ? '#685312'
-      : 'rgba(255,255,255,0.08)',
+    background: active ? '#685312' : 'rgba(255,255,255,0.08)',
     color: 'white',
     cursor: 'pointer',
     fontWeight: 700,
   }
-}}
+}
