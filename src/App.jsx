@@ -9,7 +9,14 @@ import {
   BattleBanner,
   CapturedPieces,
 } from './components/BattlePresentation.jsx'
-import { getStockfishMove } from './engine/stockfishEngine.js'
+import {
+  cancelStockfishMove,
+  getStockfishMove,
+} from './engine/stockfishEngine.js'
+import {
+  createBotRequestGuard,
+  createHistoryController,
+} from './game/history.js'
 
 const pieceSymbols = {
   p: '♟',
@@ -34,7 +41,11 @@ const depthMap = {
 
 export default function App() {
   const chess = useMemo(() => new Chess(), [])
-  const gameVersion = useRef(0)
+  const historyController = useMemo(
+    () => createHistoryController(chess),
+    [chess],
+  )
+  const botRequestGuard = useMemo(() => createBotRequestGuard(), [])
   const botTimer = useRef(null)
   const battleId = useRef(0)
   const [, refresh] = useState(0)
@@ -43,19 +54,20 @@ export default function App() {
   const [legalMoves, setLegalMoves] = useState([])
   const [mode, setMode] = useState('human')
   const [thinking, setThinking] = useState(false)
-  const [history, setHistory] = useState([])
   const [battleEvent, setBattleEvent] = useState(null)
 
   const board = chess.board()
   const captured = getCapturedPieces(chess.history({ verbose: true }))
+  const history = chess.history()
   const feedback = getPositionFeedback(chess)
 
   useEffect(
     () => () => {
-      gameVersion.current += 1
+      botRequestGuard.invalidate()
       clearTimeout(botTimer.current)
+      cancelStockfishMove()
     },
-    [],
+    [botRequestGuard],
   )
 
   const squareFromCoords = (row, col) =>
@@ -71,13 +83,14 @@ export default function App() {
   }
 
   const invalidateBotMove = () => {
-    gameVersion.current += 1
+    botRequestGuard.invalidate()
     clearTimeout(botTimer.current)
     botTimer.current = null
+    cancelStockfishMove()
   }
 
   const recordMove = (move) => {
-    setHistory((oldHistory) => [...oldHistory, move.san])
+    historyController.recordMove()
 
     const event = createCaptureEvent(move, ++battleId.current)
     if (event) setBattleEvent(event)
@@ -98,7 +111,7 @@ export default function App() {
 
   const makeBotMove = async (requestVersion) => {
     if (
-      requestVersion !== gameVersion.current ||
+      !botRequestGuard.isCurrent(requestVersion) ||
       mode !== 'bot' ||
       chess.isGameOver()
     ) {
@@ -113,7 +126,7 @@ export default function App() {
         depthMap[difficulty],
       )
 
-      if (requestVersion !== gameVersion.current) return
+      if (!botRequestGuard.isCurrent(requestVersion)) return
 
       const result = chess.move({
         from: bestMove.slice(0, 2),
@@ -123,16 +136,16 @@ export default function App() {
 
       if (result) recordMove(result)
     } catch (error) {
-      if (requestVersion === gameVersion.current) {
+      if (botRequestGuard.isCurrent(requestVersion)) {
         console.error('Stockfish error:', error)
       }
     } finally {
-      if (requestVersion === gameVersion.current) setThinking(false)
+      if (botRequestGuard.isCurrent(requestVersion)) setThinking(false)
     }
   }
 
   const scheduleBotMove = () => {
-    const requestVersion = gameVersion.current
+    const requestVersion = botRequestGuard.capture()
     botTimer.current = setTimeout(
       () => makeBotMove(requestVersion),
       100,
@@ -183,8 +196,8 @@ export default function App() {
   const resetGame = () => {
     invalidateBotMove()
     chess.reset()
+    historyController.clear()
     clearSelection()
-    setHistory([])
     setBattleEvent(null)
     setThinking(false)
     updateScreen()
@@ -193,12 +206,44 @@ export default function App() {
   const changeMode = (newMode) => {
     invalidateBotMove()
     chess.reset()
+    historyController.clear()
     setMode(newMode)
     clearSelection()
-    setHistory([])
     setBattleEvent(null)
     setThinking(false)
     updateScreen()
+  }
+
+  const prepareHistoryChange = () => {
+    invalidateBotMove()
+    clearSelection()
+    setBattleEvent(null)
+    setThinking(false)
+  }
+
+  const undoMove = () => {
+    if (!history.length) return
+
+    prepareHistoryChange()
+    historyController.undo(mode)
+    updateScreen()
+  }
+
+  const redoMove = () => {
+    if (!historyController.canRedo()) return
+
+    prepareHistoryChange()
+    const redoneMoves = historyController.redo()
+    updateScreen()
+
+    if (
+      mode === 'bot' &&
+      redoneMoves.length === 1 &&
+      chess.turn() === 'b' &&
+      !chess.isGameOver()
+    ) {
+      scheduleBotMove()
+    }
   }
 
   const status = () => {
@@ -221,6 +266,13 @@ export default function App() {
         <button onClick={() => changeMode('human')}>Human vs Human</button>
         <button onClick={() => changeMode('bot')}>Human vs Bot</button>
         <button onClick={resetGame}>Reset Match</button>
+        <button disabled={!history.length} onClick={undoMove}>Undo</button>
+        <button
+          disabled={!historyController.canRedo()}
+          onClick={redoMove}
+        >
+          Redo
+        </button>
 
         {mode === 'bot' && (
           <div className="difficulty-controls" aria-label="Bot difficulty">
