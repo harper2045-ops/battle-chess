@@ -7,6 +7,7 @@ class MockWorker {
     this.url = url
     this.listeners = new Set()
     this.messages = []
+    this.terminated = false
     MockWorker.instances.push(this)
   }
 
@@ -20,6 +21,11 @@ class MockWorker {
 
   postMessage(message) {
     this.messages.push(message)
+  }
+
+  terminate() {
+    this.terminated = true
+    this.listeners.clear()
   }
 
   emit(message) {
@@ -67,5 +73,27 @@ describe('Stockfish engine', () => {
 
     await expect(movePromise).rejects.toThrow('Stockfish returned no move')
     expect(worker.listeners.size).toBe(0)
+  })
+
+  it('cancels a pending response before history changes', async () => {
+    const { cancelStockfishMove, getStockfishMove } = await import(
+      './stockfishEngine.js'
+    )
+    const movePromise = getStockfishMove('position-before-undo')
+    const staleWorker = MockWorker.instances[0]
+
+    cancelStockfishMove()
+
+    await expect(movePromise).rejects.toMatchObject({ name: 'AbortError' })
+    expect(staleWorker.messages.at(-1)).toBe('stop')
+    expect(staleWorker.terminated).toBe(true)
+    expect(staleWorker.listeners.size).toBe(0)
+
+    const currentMove = getStockfishMove('position-after-redo')
+    const currentWorker = MockWorker.instances[1]
+    staleWorker.emit('bestmove e7e5')
+    currentWorker.emit('bestmove c7c5')
+
+    await expect(currentMove).resolves.toBe('c7c5')
   })
 })
