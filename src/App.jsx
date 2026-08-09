@@ -17,6 +17,9 @@ import {
   createBotRequestGuard,
   createHistoryController,
 } from './game/history.js'
+import { getOrientedBoard } from './game/board.js'
+import { copyPgn, createPgnFilename, getGamePgn } from './game/pgn.js'
+import { isBotTurn } from './game/player.js'
 
 const pieceSymbols = {
   p: '♟',
@@ -47,16 +50,21 @@ export default function App() {
   )
   const botRequestGuard = useMemo(() => createBotRequestGuard(), [])
   const botTimer = useRef(null)
+  const modeRef = useRef('human')
+  const playerColorRef = useRef('w')
   const battleId = useRef(0)
   const [, refresh] = useState(0)
   const [difficulty, setDifficulty] = useState('medium')
   const [selected, setSelected] = useState(null)
   const [legalMoves, setLegalMoves] = useState([])
   const [mode, setMode] = useState('human')
+  const [orientation, setOrientation] = useState('w')
+  const [playerColor, setPlayerColor] = useState('w')
   const [thinking, setThinking] = useState(false)
   const [battleEvent, setBattleEvent] = useState(null)
+  const [copyStatus, setCopyStatus] = useState('')
 
-  const board = chess.board()
+  const board = getOrientedBoard(chess.board(), orientation)
   const captured = getCapturedPieces(chess.history({ verbose: true }))
   const history = chess.history()
   const feedback = getPositionFeedback(chess)
@@ -69,9 +77,6 @@ export default function App() {
     },
     [botRequestGuard],
   )
-
-  const squareFromCoords = (row, col) =>
-    String.fromCharCode(97 + col) + (8 - row)
 
   const updateScreen = () => {
     refresh((number) => number + 1)
@@ -91,6 +96,7 @@ export default function App() {
 
   const recordMove = (move) => {
     historyController.recordMove()
+    setCopyStatus('')
 
     const event = createCaptureEvent(move, ++battleId.current)
     if (event) setBattleEvent(event)
@@ -112,7 +118,11 @@ export default function App() {
   const makeBotMove = async (requestVersion) => {
     if (
       !botRequestGuard.isCurrent(requestVersion) ||
-      mode !== 'bot' ||
+      !isBotTurn(
+        modeRef.current,
+        playerColorRef.current,
+        chess.turn(),
+      ) ||
       chess.isGameOver()
     ) {
       return
@@ -152,14 +162,13 @@ export default function App() {
     )
   }
 
-  const handleClick = (row, col) => {
+  const handleClick = (square) => {
     if (thinking || chess.isGameOver()) return
 
-    const square = squareFromCoords(row, col)
     const piece = chess.get(square)
 
     if (!selected) {
-      if (mode === 'bot' && chess.turn() === 'b') return
+      if (isBotTurn(mode, playerColor, chess.turn())) return
       selectPiece(square)
       return
     }
@@ -184,7 +193,10 @@ export default function App() {
       clearSelection()
       recordMove(move)
 
-      if (mode === 'bot' && chess.turn() === 'b' && !chess.isGameOver()) {
+      if (
+        isBotTurn(mode, playerColor, chess.turn()) &&
+        !chess.isGameOver()
+      ) {
         scheduleBotMove()
       }
     } catch (error) {
@@ -199,33 +211,67 @@ export default function App() {
     historyController.clear()
     clearSelection()
     setBattleEvent(null)
+    setCopyStatus('')
     setThinking(false)
     updateScreen()
+
+    if (
+      isBotTurn(
+        modeRef.current,
+        playerColorRef.current,
+        chess.turn(),
+      )
+    ) {
+      scheduleBotMove()
+    }
   }
 
   const changeMode = (newMode) => {
     invalidateBotMove()
     chess.reset()
     historyController.clear()
+    modeRef.current = newMode
     setMode(newMode)
     clearSelection()
     setBattleEvent(null)
+    setCopyStatus('')
     setThinking(false)
     updateScreen()
+
+    if (isBotTurn(newMode, playerColorRef.current, chess.turn())) {
+      scheduleBotMove()
+    }
+  }
+
+  const changePlayerColor = (color) => {
+    invalidateBotMove()
+    chess.reset()
+    historyController.clear()
+    playerColorRef.current = color
+    setPlayerColor(color)
+    setOrientation(color)
+    clearSelection()
+    setBattleEvent(null)
+    setCopyStatus('')
+    setThinking(false)
+    updateScreen()
+
+    if (isBotTurn(modeRef.current, color, chess.turn())) scheduleBotMove()
   }
 
   const prepareHistoryChange = () => {
     invalidateBotMove()
     clearSelection()
     setBattleEvent(null)
+    setCopyStatus('')
     setThinking(false)
   }
 
   const undoMove = () => {
-    if (!history.length) return
+    if (!historyController.canUndo(mode, playerColor)) return
 
     prepareHistoryChange()
-    historyController.undo(mode)
+    historyController.undo(mode, playerColor)
     updateScreen()
   }
 
@@ -237,13 +283,35 @@ export default function App() {
     updateScreen()
 
     if (
-      mode === 'bot' &&
       redoneMoves.length === 1 &&
-      chess.turn() === 'b' &&
+      isBotTurn(mode, playerColor, chess.turn()) &&
       !chess.isGameOver()
     ) {
       scheduleBotMove()
     }
+  }
+
+  const copyGamePgn = async () => {
+    try {
+      await copyPgn(getGamePgn(chess), navigator.clipboard)
+      setCopyStatus('PGN copied')
+    } catch {
+      setCopyStatus('Unable to copy PGN')
+    }
+  }
+
+  const downloadGamePgn = () => {
+    const pgn = getGamePgn(chess)
+    if (!pgn) return
+
+    const url = URL.createObjectURL(
+      new Blob([pgn], { type: 'application/x-chess-pgn' }),
+    )
+    const link = document.createElement('a')
+    link.href = url
+    link.download = createPgnFilename()
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   const status = () => {
@@ -266,28 +334,66 @@ export default function App() {
         <button onClick={() => changeMode('human')}>Human vs Human</button>
         <button onClick={() => changeMode('bot')}>Human vs Bot</button>
         <button onClick={resetGame}>Reset Match</button>
-        <button disabled={!history.length} onClick={undoMove}>Undo</button>
+        <button
+          disabled={!historyController.canUndo(mode, playerColor)}
+          onClick={undoMove}
+        >
+          Undo
+        </button>
         <button
           disabled={!historyController.canRedo()}
           onClick={redoMove}
         >
           Redo
         </button>
+        <button
+          aria-label={`Show ${orientation === 'w' ? 'Black' : 'White'} at the bottom`}
+          onClick={() => setOrientation(orientation === 'w' ? 'b' : 'w')}
+        >
+          Flip Board
+        </button>
 
         {mode === 'bot' && (
-          <div className="difficulty-controls" aria-label="Bot difficulty">
-            {Object.keys(depthMap).map((level) => (
+          <div className="bot-options">
+            <div className="color-controls" aria-label="Choose your color">
+              <span>You play:</span>
               <button
-                aria-pressed={difficulty === level}
-                key={level}
-                onClick={() => setDifficulty(level)}
-                style={difficultyButtonStyle(difficulty === level)}
+                aria-pressed={playerColor === 'w'}
+                onClick={() => changePlayerColor('w')}
               >
-                {level[0].toUpperCase() + level.slice(1)}
+                White
               </button>
-            ))}
+              <button
+                aria-pressed={playerColor === 'b'}
+                onClick={() => changePlayerColor('b')}
+              >
+                Black
+              </button>
+            </div>
+            <div className="difficulty-controls" aria-label="Bot difficulty">
+              {Object.keys(depthMap).map((level) => (
+                <button
+                  aria-pressed={difficulty === level}
+                  key={level}
+                  onClick={() => setDifficulty(level)}
+                  style={difficultyButtonStyle(difficulty === level)}
+                >
+                  {level[0].toUpperCase() + level.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
         )}
+      </div>
+
+      <div className="export-controls" aria-label="Export game">
+        <button disabled={!history.length} onClick={copyGamePgn}>
+          Copy PGN
+        </button>
+        <button disabled={!history.length} onClick={downloadGamePgn}>
+          Download PGN
+        </button>
+        <span aria-live="polite">{copyStatus}</span>
       </div>
 
       <h2 className={`game-status game-status--${feedback}`} aria-live="polite">
@@ -301,8 +407,7 @@ export default function App() {
         aria-label="Chess board"
       >
         {board.map((row, rowIndex) =>
-          row.map((piece, colIndex) => {
-            const square = squareFromCoords(rowIndex, colIndex)
+          row.map(({ piece, square }, colIndex) => {
             const light = (rowIndex + colIndex) % 2 === 0
             const legal = legalMoves.includes(square)
             const selectedSquare = selected === square
@@ -334,7 +439,7 @@ export default function App() {
                 className="board-square"
                 disabled={thinking || chess.isGameOver()}
                 key={square}
-                onClick={() => handleClick(rowIndex, colIndex)}
+                onClick={() => handleClick(square)}
                 style={{ background }}
               >
                 {symbol}

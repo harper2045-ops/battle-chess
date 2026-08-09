@@ -45,6 +45,30 @@ describe('game history', () => {
     expect(history.redo().map((move) => move.san)).toEqual(['e4'])
   })
 
+  it('undoes a complete turn when the player is Black', () => {
+    const chess = new Chess()
+    const history = createHistoryController(chess)
+    for (const move of ['e4', 'e5', 'Nf3']) {
+      chess.move(move)
+      history.recordMove()
+    }
+
+    expect(history.undo('bot', 'b')).toBe(2)
+    expect(chess.history()).toEqual(['e4'])
+    expect(history.redo().map((move) => move.san)).toEqual(['e5', 'Nf3'])
+  })
+
+  it('does not undo the bot opening before Black has moved', () => {
+    const chess = new Chess()
+    const history = createHistoryController(chess)
+    chess.move('e4')
+    history.recordMove()
+
+    expect(history.canUndo('bot', 'b')).toBe(false)
+    expect(history.undo('bot', 'b')).toBe(0)
+    expect(chess.history()).toEqual(['e4'])
+  })
+
   it('keeps captures and move history accurate across undo and redo', () => {
     const chess = new Chess()
     const history = createHistoryController(chess)

@@ -6,6 +6,14 @@ function toMoveInput(move) {
   }
 }
 
+function canUndo(chess, mode, playerColor) {
+  const plyCount = chess.history().length
+  return !(
+    plyCount === 0 ||
+    (mode === 'bot' && playerColor === 'b' && plyCount === 1)
+  )
+}
+
 export function createHistoryController(chess) {
   const redoTurns = []
 
@@ -18,14 +26,22 @@ export function createHistoryController(chess) {
       return redoTurns.length > 0
     },
 
+    canUndo(mode, playerColor = 'w') {
+      return canUndo(chess, mode, playerColor)
+    },
+
     recordMove() {
       redoTurns.length = 0
     },
 
-    undo(mode) {
+    undo(mode, playerColor = 'w') {
+      if (!canUndo(chess, mode, playerColor)) return 0
+
       const plyCount = chess.history().length
       const undoCount =
-        mode === 'bot' && plyCount > 1 && plyCount % 2 === 0 ? 2 : 1
+        mode === 'bot' && plyCount > 1 && chess.turn() === playerColor
+          ? 2
+          : 1
       const moves = []
 
       for (let index = 0; index < undoCount; index += 1) {
