@@ -214,6 +214,51 @@ button {
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
+.chess-board-3d {
+  position: relative;
+  width: min(94vw, 760px);
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 10px solid #3a2b20;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 35%, #313149, #101018 72%);
+  box-shadow: 0 18px 55px rgb(0 0 0 / 60%);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.chess-board-3d canvas {
+  display: block;
+  touch-action: none;
+}
+
+.chess-board-3d--check {
+  border-color: #9a651f;
+  box-shadow: 0 0 28px rgb(255 166 35 / 38%), 0 18px 55px rgb(0 0 0 / 60%);
+  animation: check-warning 700ms ease-in-out 2;
+}
+
+.chess-board-3d--checkmate {
+  border-color: #982f2f;
+  box-shadow: 0 0 34px rgb(255 45 45 / 48%), 0 18px 55px rgb(0 0 0 / 60%);
+}
+
+.chess-board-3d--timeout {
+  border-color: #8f432f;
+  box-shadow: 0 0 34px rgb(255 91 49 / 42%), 0 18px 55px rgb(0 0 0 / 60%);
+}
+
+.board-accessible-controls {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .chess-board--check {
   border-color: #9a651f;
   box-shadow: 0 0 28px rgb(255 166 35 / 38%), 0 18px 55px rgb(0 0 0 / 60%);
@@ -416,7 +461,8 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .battle-banner__event,
   .battle-impact,
-  .chess-board--check {
+  .chess-board--check,
+  .chess-board-3d--check {
     animation: none;
   }
 

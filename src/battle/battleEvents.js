@@ -19,6 +19,10 @@ export function createCaptureEvent(move, id = 0) {
     },
     from: move.from,
     to: move.to,
+    defenderSquare: move.flags.includes('e')
+      ? `${move.to[0]}${move.from[1]}`
+      : move.to,
+    promotion: move.promotion ?? null,
   }
 }
 

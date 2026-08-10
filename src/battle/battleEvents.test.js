@@ -21,6 +21,34 @@ describe('battle presentation events', () => {
       defender: { type: 'p', color: 'b' },
       from: 'e4',
       to: 'd5',
+      defenderSquare: 'd5',
+      promotion: null,
+    })
+  })
+
+  it('includes the defender actual square for en passant', () => {
+    const chess = new Chess(
+      '4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1',
+    )
+
+    expect(createCaptureEvent(chess.move('exd6'))).toMatchObject({
+      from: 'e5',
+      to: 'd6',
+      defenderSquare: 'd5',
+      promotion: null,
+    })
+  })
+
+  it('includes promotion metadata for a promotion capture', () => {
+    const chess = new Chess('4k2r/6P1/8/8/8/8/8/4K3 w - - 0 1')
+
+    expect(createCaptureEvent(chess.move('gxh8=Q'))).toMatchObject({
+      attacker: { type: 'p', color: 'w' },
+      defender: { type: 'r', color: 'b' },
+      from: 'g7',
+      to: 'h8',
+      defenderSquare: 'h8',
+      promotion: 'q',
     })
   })
 

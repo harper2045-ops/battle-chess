@@ -15,6 +15,7 @@ import {
   BattleBanner,
   CapturedPieces,
 } from './components/BattlePresentation.jsx'
+import { ChessBoard3D } from './components/ChessBoard3D.jsx'
 import {
   ChessClocks,
   TimeControlPicker,
@@ -31,21 +32,6 @@ import { getOrientedBoard } from './game/board.js'
 import { copyPgn, createPgnFilename, getGamePgn } from './game/pgn.js'
 import { isBotTurn } from './game/player.js'
 import { createClockController } from './game/clock.js'
-
-const pieceSymbols = {
-  p: '♟',
-  n: '♞',
-  b: '♝',
-  r: '♜',
-  q: '♛',
-  k: '♚',
-  P: '♙',
-  N: '♘',
-  B: '♗',
-  R: '♖',
-  Q: '♕',
-  K: '♔',
-}
 
 const depthMap = {
   easy: 5,
@@ -75,6 +61,7 @@ export default function App() {
   const [playerColor, setPlayerColor] = useState('w')
   const [thinking, setThinking] = useState(false)
   const [battleEvent, setBattleEvent] = useState(null)
+  const [activeCapture, setActiveCapture] = useState(null)
   const [copyStatus, setCopyStatus] = useState('')
   const [timeControl, setTimeControl] = useState('untimed')
   const [clockState, setClockState] = useState(() =>
@@ -165,7 +152,10 @@ export default function App() {
     setClockState(nextClockState)
 
     const event = createCaptureEvent(move, ++battleId.current)
-    if (event) setBattleEvent(event)
+    if (event) {
+      setBattleEvent(event)
+      setActiveCapture(event)
+    }
 
     updateScreen()
   }
@@ -285,6 +275,7 @@ export default function App() {
     historyController.clear()
     clearSelection()
     setBattleEvent(null)
+    setActiveCapture(null)
     setCopyStatus('')
     setThinking(false)
     resetClock()
@@ -309,6 +300,7 @@ export default function App() {
     setMode(newMode)
     clearSelection()
     setBattleEvent(null)
+    setActiveCapture(null)
     setCopyStatus('')
     setThinking(false)
     resetClock()
@@ -328,6 +320,7 @@ export default function App() {
     setOrientation(color)
     clearSelection()
     setBattleEvent(null)
+    setActiveCapture(null)
     setCopyStatus('')
     setThinking(false)
     resetClock()
@@ -340,6 +333,7 @@ export default function App() {
     invalidateBotMove()
     clearSelection()
     setBattleEvent(null)
+    setActiveCapture(null)
     setCopyStatus('')
     setThinking(false)
     timeoutResultRef.current = null
@@ -379,6 +373,7 @@ export default function App() {
     setTimeControl(controlId)
     clearSelection()
     setBattleEvent(null)
+    setActiveCapture(null)
     setCopyStatus('')
     setThinking(false)
     resetClock(controlId)
@@ -417,6 +412,12 @@ export default function App() {
     link.click()
     URL.revokeObjectURL(url)
   }
+
+  const completeCapture = useCallback((eventId) => {
+    setActiveCapture((current) =>
+      current?.id === eventId ? null : current,
+    )
+  }, [])
 
   const status = () => {
     if (matchResult?.type === 'timeout') {
@@ -519,61 +520,17 @@ export default function App() {
 
       <ChessClocks orientation={orientation} state={clockState} />
 
-      <div
-        className={`chess-board chess-board--${matchFeedback}`}
-        aria-label="Chess board"
-      >
-        {board.map((row, rowIndex) =>
-          row.map(({ piece, square }, colIndex) => {
-            const light = (rowIndex + colIndex) % 2 === 0
-            const legal = legalMoves.includes(square)
-            const selectedSquare = selected === square
-            const targetPiece = chess.get(square)
-            const capture =
-              legal &&
-              targetPiece &&
-              selected &&
-              chess.get(selected)?.color !== targetPiece.color
-            let background = light ? '#d8bd86' : '#755038'
-
-            if (selectedSquare) background = '#d6a900'
-            else if (capture) background = '#a83b3b'
-            else if (legal) background = '#63895b'
-
-            let symbol = ''
-            if (piece) {
-              const key =
-                piece.color === 'w' ? piece.type.toUpperCase() : piece.type
-              symbol = pieceSymbols[key]
-            }
-
-            const impact =
-              battleEvent?.type === 'capture' && battleEvent.to === square
-
-            return (
-              <button
-                aria-label={`${square.toUpperCase()}${piece ? ` ${piece.color === 'w' ? 'White' : 'Black'} piece` : ''}`}
-                className="board-square"
-                disabled={thinking || chess.isGameOver() || Boolean(matchResult)}
-                key={square}
-                onClick={() => handleClick(square)}
-                style={{ background }}
-              >
-                {symbol}
-                {legal && !piece && <span className="legal-move-dot" />}
-                {capture && <span className="capture-target" />}
-                {impact && (
-                  <span
-                    aria-hidden="true"
-                    className="battle-impact"
-                    key={battleEvent.id}
-                  />
-                )}
-              </button>
-            )
-          }),
-        )}
-      </div>
+      <ChessBoard3D
+        board={board}
+        orientation={orientation}
+        selected={selected}
+        legalMoves={legalMoves}
+        activeCapture={activeCapture}
+        disabled={thinking || chess.isGameOver() || Boolean(matchResult)}
+        feedback={matchFeedback}
+        onSquareClick={handleClick}
+        onCaptureComplete={completeCapture}
+      />
 
       <CapturedPieces captured={captured} />
 
