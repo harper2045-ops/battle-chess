@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import {
@@ -6,6 +6,7 @@ import {
   getCapturePose,
   squareToWorld,
 } from '../battle/captureAnimation.js'
+import { FantasyPiece } from './FantasyPiece.jsx'
 
 const pieceNames = {
   p: 'Pawn',
@@ -42,7 +43,7 @@ function Material({ color, selected = false }) {
   )
 }
 
-function Piece({ piece, selected = false }) {
+function ProceduralPiece({ piece, selected = false }) {
   const material = { color: piece.color, selected }
 
   return (
@@ -142,6 +143,14 @@ function Piece({ piece, selected = false }) {
         </>
       )}
     </group>
+  )
+}
+
+function Piece({ piece, selected = false }) {
+  return (
+    <Suspense fallback={<ProceduralPiece piece={piece} selected={selected} />}>
+      <FantasyPiece piece={piece} />
+    </Suspense>
   )
 }
 
