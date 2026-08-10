@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { getCapturePose, squareToWorld } from './captureAnimation.js'
+import {
+  getCaptureActions,
+  getCapturePose,
+  squareToWorld,
+} from './captureAnimation.js'
 
 describe('3D capture presentation', () => {
   it('maps notation to stable board coordinates', () => {
@@ -25,5 +29,18 @@ describe('3D capture presentation', () => {
     expect(end.attacker).not.toEqual(start.attacker)
     expect(end.defenderScale).toBeCloseTo(0.12)
     expect(end.defenderRotation).toBeCloseTo(1.35)
+  })
+
+  it('sequences humanoid attack, hit, and death clips', () => {
+    expect(getCaptureActions(0)).toEqual({ attacker: 'idle', defender: 'idle' })
+    expect(getCaptureActions(0.3)).toEqual({ attacker: 'attack', defender: 'hit' })
+    expect(getCaptureActions(0.7)).toEqual({ attacker: 'attack', defender: 'death' })
+  })
+
+  it('keeps actors still for reduced motion', () => {
+    expect(getCaptureActions(0.7, true)).toEqual({
+      attacker: 'idle',
+      defender: 'idle',
+    })
   })
 })

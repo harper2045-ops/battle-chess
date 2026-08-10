@@ -2,6 +2,19 @@ const files = 'abcdefgh'
 
 export const captureDuration = 760
 
+export function getCaptureActions(progress, reducedMotion = false) {
+  if (reducedMotion) {
+    return { attacker: 'idle', defender: 'idle' }
+  }
+
+  const t = Math.max(0, Math.min(1, progress))
+
+  return {
+    attacker: t < 0.08 ? 'idle' : 'attack',
+    defender: t < 0.28 ? 'idle' : t < 0.52 ? 'hit' : 'death',
+  }
+}
+
 export function squareToWorld(square) {
   return [files.indexOf(square[0]) - 3.5, 0, 4.5 - Number(square[1])]
 }

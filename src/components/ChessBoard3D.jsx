@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import {
   captureDuration,
+  getCaptureActions,
   getCapturePose,
   squareToWorld,
 } from '../battle/captureAnimation.js'
@@ -146,10 +147,10 @@ function ProceduralPiece({ piece, selected = false }) {
   )
 }
 
-function Piece({ piece, selected = false }) {
+function Piece({ piece, selected = false, action = 'idle' }) {
   return (
     <Suspense fallback={<ProceduralPiece piece={piece} selected={selected} />}>
-      <FantasyPiece piece={piece} />
+      <FantasyPiece piece={piece} selected={selected} action={action} />
     </Suspense>
   )
 }
@@ -172,6 +173,9 @@ function CaptureActors({ event, onComplete, reducedMotion }) {
   const defender = useRef()
   const elapsed = useRef(0)
   const done = useRef(false)
+  const [actions, setActions] = useState(() =>
+    getCaptureActions(0, reducedMotion),
+  )
 
   useFrame((_, delta) => {
     if (done.current) return
@@ -180,6 +184,14 @@ function CaptureActors({ event, onComplete, reducedMotion }) {
     const duration = reducedMotion ? 80 : captureDuration
     const progress = Math.min(1, elapsed.current / duration)
     const pose = getCapturePose(event, progress)
+    const nextActions = getCaptureActions(progress, reducedMotion)
+
+    setActions((current) =>
+      current.attacker === nextActions.attacker &&
+      current.defender === nextActions.defender
+        ? current
+        : nextActions,
+    )
 
     attacker.current.position.set(...pose.attacker)
     defender.current.position.set(...pose.defender)
@@ -195,10 +207,10 @@ function CaptureActors({ event, onComplete, reducedMotion }) {
   return (
     <>
       <group ref={attacker} position={squareToWorld(event.from)}>
-        <Piece piece={event.attacker} />
+        <Piece piece={event.attacker} action={actions.attacker} />
       </group>
       <group ref={defender} position={squareToWorld(event.defenderSquare)}>
-        <Piece piece={event.defender} />
+        <Piece piece={event.defender} action={actions.defender} />
       </group>
     </>
   )
