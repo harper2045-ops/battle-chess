@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { Chess } from 'chess.js'
 import {
   createCaptureEvent,
@@ -10,6 +16,10 @@ import {
   CapturedPieces,
 } from './components/BattlePresentation.jsx'
 import {
+  ChessClocks,
+  TimeControlPicker,
+} from './components/ChessClocks.jsx'
+import {
   cancelStockfishMove,
   getStockfishMove,
 } from './engine/stockfishEngine.js'
@@ -20,6 +30,7 @@ import {
 import { getOrientedBoard } from './game/board.js'
 import { copyPgn, createPgnFilename, getGamePgn } from './game/pgn.js'
 import { isBotTurn } from './game/player.js'
+import { createClockController } from './game/clock.js'
 
 const pieceSymbols = {
   p: '♟',
@@ -49,9 +60,11 @@ export default function App() {
     [chess],
   )
   const botRequestGuard = useMemo(() => createBotRequestGuard(), [])
+  const clockController = useMemo(() => createClockController(), [])
   const botTimer = useRef(null)
   const modeRef = useRef('human')
   const playerColorRef = useRef('w')
+  const timeoutResultRef = useRef(null)
   const battleId = useRef(0)
   const [, refresh] = useState(0)
   const [difficulty, setDifficulty] = useState('medium')
@@ -63,11 +76,17 @@ export default function App() {
   const [thinking, setThinking] = useState(false)
   const [battleEvent, setBattleEvent] = useState(null)
   const [copyStatus, setCopyStatus] = useState('')
+  const [timeControl, setTimeControl] = useState('untimed')
+  const [clockState, setClockState] = useState(() =>
+    clockController.getState(),
+  )
+  const [matchResult, setMatchResult] = useState(null)
 
   const board = getOrientedBoard(chess.board(), orientation)
   const captured = getCapturedPieces(chess.history({ verbose: true }))
   const history = chess.history()
   const feedback = getPositionFeedback(chess)
+  const matchFeedback = matchResult ? 'timeout' : feedback
 
   useEffect(
     () => () => {
@@ -82,21 +101,68 @@ export default function App() {
     refresh((number) => number + 1)
   }
 
-  const clearSelection = () => {
+  const clearSelection = useCallback(() => {
     setSelected(null)
     setLegalMoves([])
-  }
+  }, [])
 
-  const invalidateBotMove = () => {
+  const invalidateBotMove = useCallback(() => {
     botRequestGuard.invalidate()
     clearTimeout(botTimer.current)
     botTimer.current = null
     cancelStockfishMove()
+  }, [botRequestGuard])
+
+  const endByTimeout = useCallback((state) => {
+    if (!state.timedOutColor || timeoutResultRef.current) return
+
+    const result = {
+      type: 'timeout',
+      loser: state.timedOutColor,
+      winner: state.timedOutColor === 'w' ? 'b' : 'w',
+    }
+    timeoutResultRef.current = result
+    setMatchResult(result)
+    invalidateBotMove()
+    clearSelection()
+    setThinking(false)
+  }, [clearSelection, invalidateBotMove])
+
+  const refreshClock = useCallback(() => {
+    const state = clockController.getState()
+    setClockState(state)
+    endByTimeout(state)
+    return state
+  }, [clockController, endByTimeout])
+
+  useEffect(() => {
+    if (!clockState.running) return undefined
+
+    const interval = setInterval(refreshClock, 100)
+    document.addEventListener('visibilitychange', refreshClock)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', refreshClock)
+    }
+  }, [clockState.running, refreshClock])
+
+  const resetClock = (controlId = timeControl) => {
+    timeoutResultRef.current = null
+    setMatchResult(null)
+    setClockState(clockController.reset(controlId, 'w'))
   }
 
   const recordMove = (move) => {
     historyController.recordMove()
     setCopyStatus('')
+
+    const nextClockState = clockController.completeMove(
+      move.color,
+      chess.turn(),
+      chess.isGameOver(),
+    )
+    setClockState(nextClockState)
 
     const event = createCaptureEvent(move, ++battleId.current)
     if (event) setBattleEvent(event)
@@ -136,7 +202,13 @@ export default function App() {
         depthMap[difficulty],
       )
 
-      if (!botRequestGuard.isCurrent(requestVersion)) return
+      const currentClock = refreshClock()
+      if (
+        currentClock.timedOutColor ||
+        !botRequestGuard.isCurrent(requestVersion)
+      ) {
+        return
+      }
 
       const result = chess.move({
         from: bestMove.slice(0, 2),
@@ -163,7 +235,9 @@ export default function App() {
   }
 
   const handleClick = (square) => {
-    if (thinking || chess.isGameOver()) return
+    if (thinking || chess.isGameOver() || matchResult) return
+
+    if (refreshClock().timedOutColor) return
 
     const piece = chess.get(square)
 
@@ -213,6 +287,7 @@ export default function App() {
     setBattleEvent(null)
     setCopyStatus('')
     setThinking(false)
+    resetClock()
     updateScreen()
 
     if (
@@ -236,6 +311,7 @@ export default function App() {
     setBattleEvent(null)
     setCopyStatus('')
     setThinking(false)
+    resetClock()
     updateScreen()
 
     if (isBotTurn(newMode, playerColorRef.current, chess.turn())) {
@@ -254,6 +330,7 @@ export default function App() {
     setBattleEvent(null)
     setCopyStatus('')
     setThinking(false)
+    resetClock()
     updateScreen()
 
     if (isBotTurn(modeRef.current, color, chess.turn())) scheduleBotMove()
@@ -265,13 +342,16 @@ export default function App() {
     setBattleEvent(null)
     setCopyStatus('')
     setThinking(false)
+    timeoutResultRef.current = null
+    setMatchResult(null)
   }
 
   const undoMove = () => {
     if (!historyController.canUndo(mode, playerColor)) return
 
     prepareHistoryChange()
-    historyController.undo(mode, playerColor)
+    const undoneMoves = historyController.undo(mode, playerColor)
+    setClockState(clockController.undo(undoneMoves))
     updateScreen()
   }
 
@@ -280,12 +360,36 @@ export default function App() {
 
     prepareHistoryChange()
     const redoneMoves = historyController.redo()
+    setClockState(clockController.redo())
     updateScreen()
 
     if (
       redoneMoves.length === 1 &&
       isBotTurn(mode, playerColor, chess.turn()) &&
       !chess.isGameOver()
+    ) {
+      scheduleBotMove()
+    }
+  }
+
+  const changeTimeControl = (controlId) => {
+    invalidateBotMove()
+    chess.reset()
+    historyController.clear()
+    setTimeControl(controlId)
+    clearSelection()
+    setBattleEvent(null)
+    setCopyStatus('')
+    setThinking(false)
+    resetClock(controlId)
+    updateScreen()
+
+    if (
+      isBotTurn(
+        modeRef.current,
+        playerColorRef.current,
+        chess.turn(),
+      )
     ) {
       scheduleBotMove()
     }
@@ -315,6 +419,9 @@ export default function App() {
   }
 
   const status = () => {
+    if (matchResult?.type === 'timeout') {
+      return `${matchResult.winner === 'w' ? 'White' : 'Black'} wins on TIME`
+    }
     if (chess.isCheckmate()) {
       return `CHECKMATE — ${chess.turn() === 'w' ? 'Black' : 'White'} wins`
     }
@@ -386,6 +493,11 @@ export default function App() {
         )}
       </div>
 
+      <TimeControlPicker
+        onChange={changeTimeControl}
+        selected={timeControl}
+      />
+
       <div className="export-controls" aria-label="Export game">
         <button disabled={!history.length} onClick={copyGamePgn}>
           Copy PGN
@@ -396,14 +508,19 @@ export default function App() {
         <span aria-live="polite">{copyStatus}</span>
       </div>
 
-      <h2 className={`game-status game-status--${feedback}`} aria-live="polite">
+      <h2
+        className={`game-status game-status--${matchFeedback}`}
+        aria-live="polite"
+      >
         {thinking ? '🤖 Bot thinking...' : status()}
       </h2>
 
       <BattleBanner event={battleEvent} />
 
+      <ChessClocks orientation={orientation} state={clockState} />
+
       <div
-        className={`chess-board chess-board--${feedback}`}
+        className={`chess-board chess-board--${matchFeedback}`}
         aria-label="Chess board"
       >
         {board.map((row, rowIndex) =>
@@ -437,7 +554,7 @@ export default function App() {
               <button
                 aria-label={`${square.toUpperCase()}${piece ? ` ${piece.color === 'w' ? 'White' : 'Black'} piece` : ''}`}
                 className="board-square"
-                disabled={thinking || chess.isGameOver()}
+                disabled={thinking || chess.isGameOver() || Boolean(matchResult)}
                 key={square}
                 onClick={() => handleClick(square)}
                 style={{ background }}
