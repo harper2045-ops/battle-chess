@@ -1,6 +1,6 @@
 const files = 'abcdefgh'
 
-export const captureDuration = 560
+export const captureDuration = 760
 
 export function squareToWorld(square) {
   return [files.indexOf(square[0]) - 3.5, 0, 4.5 - Number(square[1])]
@@ -21,9 +21,9 @@ export function getCapturePose(event, progress) {
       from[2] + (to[2] - from[2]) * lunge,
     ],
     defender: [
-      defenderSquare[0] + defeat * 0.28,
-      defeat ? -defeat * 0.3 : 0,
-      defenderSquare[2] + defeat * 0.42,
+      defenderSquare[0] + defeat * 0.75,
+      Math.sin(defeat * Math.PI) * 0.9 - defeat * 0.45,
+      defenderSquare[2] + defeat * 0.9,
     ],
     defenderScale: 1 - defeat * 0.88,
     defenderRotation: defeat * 1.35,

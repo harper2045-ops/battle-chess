@@ -163,7 +163,6 @@ function CaptureActors({ event, onComplete, reducedMotion }) {
   const defender = useRef()
   const elapsed = useRef(0)
   const done = useRef(false)
-  const { invalidate } = useThree()
 
   useFrame((_, delta) => {
     if (done.current) return
@@ -178,9 +177,7 @@ function CaptureActors({ event, onComplete, reducedMotion }) {
     defender.current.rotation.z = pose.defenderRotation
     defender.current.scale.setScalar(pose.defenderScale)
 
-    if (progress < 1) {
-      invalidate()
-    } else {
+    if (progress === 1) {
       done.current = true
       onComplete(event.id)
     }
@@ -303,12 +300,14 @@ export function ChessBoard3D({
   const reducedMotion = useReducedMotion()
 
   return (
-    <div className={`chess-board-3d chess-board-3d--${feedback}`}>
+    <div
+      className={`chess-board-3d chess-board-3d--${feedback}${activeCapture ? ' chess-board-3d--battle' : ''}`}
+    >
       <Canvas
         aria-label="Interactive 3D chess board"
         camera={{ fov: 42, near: 0.1, far: 100 }}
         dpr={1}
-        frameloop="demand"
+        frameloop={activeCapture ? 'always' : 'demand'}
       >
         <Scene
           board={board}

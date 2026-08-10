@@ -247,6 +247,11 @@ button {
   box-shadow: 0 0 34px rgb(255 91 49 / 42%), 0 18px 55px rgb(0 0 0 / 60%);
 }
 
+.chess-board-3d--battle {
+  border-color: #d7a651;
+  box-shadow: 0 0 38px rgb(255 171 54 / 48%), 0 18px 55px rgb(0 0 0 / 60%);
+}
+
 .board-accessible-controls {
   position: absolute;
   width: 1px;
