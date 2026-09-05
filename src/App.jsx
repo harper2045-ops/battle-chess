@@ -32,6 +32,7 @@ import { getOrientedBoard } from './game/board.js'
 import { copyPgn, createPgnFilename, getGamePgn } from './game/pgn.js'
 import { isBotTurn } from './game/player.js'
 import { createClockController } from './game/clock.js'
+import { useGameClock } from './hooks/useGameClock.js'
 
 const depthMap = {
   easy: 5,
@@ -50,7 +51,6 @@ export default function App() {
   const botTimer = useRef(null)
   const modeRef = useRef('human')
   const playerColorRef = useRef('w')
-  const timeoutResultRef = useRef(null)
   const battleId = useRef(0)
   const [, refresh] = useState(0)
   const [difficulty, setDifficulty] = useState('medium')
@@ -64,10 +64,33 @@ export default function App() {
   const [activeCapture, setActiveCapture] = useState(null)
   const [copyStatus, setCopyStatus] = useState('')
   const [timeControl, setTimeControl] = useState('untimed')
-  const [clockState, setClockState] = useState(() =>
-    clockController.getState(),
-  )
-  const [matchResult, setMatchResult] = useState(null)
+
+  const clearSelection = useCallback(() => {
+    setSelected(null)
+    setLegalMoves([])
+  }, [])
+
+  const invalidateBotMove = useCallback(() => {
+    botRequestGuard.invalidate()
+    clearTimeout(botTimer.current)
+    botTimer.current = null
+    cancelStockfishMove()
+  }, [botRequestGuard])
+
+  const onClockTimeout = useCallback(() => {
+    invalidateBotMove()
+    clearSelection()
+    setThinking(false)
+  }, [clearSelection, invalidateBotMove])
+
+  const {
+    clockState,
+    matchResult,
+    refreshClock,
+    resetClock: resetGameClock,
+    clearMatchResult,
+    setClockState,
+  } = useGameClock(clockController, { onTimeout: onClockTimeout })
 
   const board = getOrientedBoard(chess.board(), orientation)
   const captured = getCapturedPieces(chess.history({ verbose: true }))
@@ -88,56 +111,8 @@ export default function App() {
     refresh((number) => number + 1)
   }
 
-  const clearSelection = useCallback(() => {
-    setSelected(null)
-    setLegalMoves([])
-  }, [])
-
-  const invalidateBotMove = useCallback(() => {
-    botRequestGuard.invalidate()
-    clearTimeout(botTimer.current)
-    botTimer.current = null
-    cancelStockfishMove()
-  }, [botRequestGuard])
-
-  const endByTimeout = useCallback((state) => {
-    if (!state.timedOutColor || timeoutResultRef.current) return
-
-    const result = {
-      type: 'timeout',
-      loser: state.timedOutColor,
-      winner: state.timedOutColor === 'w' ? 'b' : 'w',
-    }
-    timeoutResultRef.current = result
-    setMatchResult(result)
-    invalidateBotMove()
-    clearSelection()
-    setThinking(false)
-  }, [clearSelection, invalidateBotMove])
-
-  const refreshClock = useCallback(() => {
-    const state = clockController.getState()
-    setClockState(state)
-    endByTimeout(state)
-    return state
-  }, [clockController, endByTimeout])
-
-  useEffect(() => {
-    if (!clockState.running) return undefined
-
-    const interval = setInterval(refreshClock, 100)
-    document.addEventListener('visibilitychange', refreshClock)
-
-    return () => {
-      clearInterval(interval)
-      document.removeEventListener('visibilitychange', refreshClock)
-    }
-  }, [clockState.running, refreshClock])
-
   const resetClock = (controlId = timeControl) => {
-    timeoutResultRef.current = null
-    setMatchResult(null)
-    setClockState(clockController.reset(controlId, 'w'))
+    resetGameClock(controlId)
   }
 
   const recordMove = (move) => {
@@ -336,8 +311,7 @@ export default function App() {
     setActiveCapture(null)
     setCopyStatus('')
     setThinking(false)
-    timeoutResultRef.current = null
-    setMatchResult(null)
+    clearMatchResult()
   }
 
   const undoMove = () => {
