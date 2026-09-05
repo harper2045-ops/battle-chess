@@ -1,16 +1,54 @@
-# React + Vite
+# ⚔️ Battle Chess
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Real chess underneath. A cinematic war game on top.
 
-Currently, two official plugins are available:
+Battle Chess is a full rules-legal chess game rendered on a low-poly 3D
+battle board, with animated fantasy armies, capture "battle report" events,
+and an optional Stockfish opponent.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- Human vs Human and Human vs Bot play, with Easy / Medium / Hard Stockfish
+  difficulty.
+- Legal move generation and game state via [chess.js](https://github.com/jhlywa/chess.js).
+- Animated 3D board and fantasy armies built with
+  [react-three-fiber](https://github.com/pmndrs/react-three-fiber) and
+  [drei](https://github.com/pmndrs/drei).
+- Structured battle events (captures, check, checkmate) that drive banners
+  and capture animations without touching chess logic.
+- Chess clocks with multiple time controls (untimed, 1+0, 3+2, 5+0, 10+0).
+- Undo / redo, board flip, and PGN copy/download.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Architecture
 
-## Expanding the Oxlint configuration
+- `chess.js` is the single source of truth for chess state and legality.
+- Stockfish (`src/engine/stockfishEngine.js`) only selects moves — it never
+  owns game state.
+- Presentation and animation (`src/components/`) never determine chess
+  outcomes; they react to structured events emitted from
+  `src/battle/battleEvents.js`.
+- Game orchestration lives in small, testable modules under `src/game/`
+  (board orientation, clocks, history/undo-redo, PGN export, player turn
+  logic) and thin hooks under `src/hooks/`, keeping `App.jsx` focused on
+  wiring rather than logic.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+See `AGENTS.md` for the full set of project rules for contributors
+(human or agent).
+
+## Getting started
+
+```bash
+npm install
+npm run dev
+```
+
+## Scripts
+
+- `npm run dev` — start the Vite dev server.
+- `npm run build` — production build.
+- `npm run preview` — preview the production build locally.
+- `npm run lint` — lint with oxlint.
+- `npm run test` — run the test suite with Vitest.
+
+Before finishing any change, run lint, build, and test, and fix any
+failures.
