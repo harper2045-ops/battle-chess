@@ -34,6 +34,7 @@ import { copyPgn, createPgnFilename, getGamePgn } from './game/pgn.js'
 import { isBotTurn } from './game/player.js'
 import { createClockController } from './game/clock.js'
 import { useGameClock } from './hooks/useGameClock.js'
+import { CreditsPanel } from './components/CreditsPanel.jsx'
 
 const depthMap = {
   easy: 5,
@@ -501,6 +502,8 @@ export default function App() {
         </button>
         <span aria-live="polite">{copyStatus}</span>
       </div>
+
+      <CreditsPanel />
 
       <h2
         className={`game-status game-status--${matchFeedback}`}

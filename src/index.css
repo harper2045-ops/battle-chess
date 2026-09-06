@@ -112,6 +112,94 @@ button {
   text-align: left;
 }
 
+.credits-controls {
+  margin: -4px 0 12px;
+}
+
+.credits-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(4 5 14 / 72%);
+}
+
+.credits-dialog {
+  width: min(92vw, 520px);
+  max-height: min(80vh, 640px);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 18px 18px 16px;
+  text-align: left;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 12px;
+  color: #e8e8f2;
+  background: linear-gradient(160deg, rgb(28 29 52 / 98%), rgb(14 14 24 / 98%));
+  box-shadow: 0 22px 60px rgb(0 0 0 / 55%), inset 0 1px rgb(255 255 255 / 8%);
+}
+
+.credits-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.credits-dialog__header h2 {
+  margin: 0;
+  color: #ffd45a;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.credits-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.credits-dialog__body h3 {
+  margin: 0 0 6px;
+  color: #f3f4f6;
+  font-size: 0.98rem;
+}
+
+.credits-dialog__body p,
+.credits-dialog__body li {
+  color: #b8b8ca;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.credits-dialog__body ul {
+  margin: 8px 0 0;
+  padding-left: 1.2em;
+}
+
+.credits-dialog__body a {
+  color: #ffd45a;
+}
+
+.credits-dialog__license {
+  margin-top: 8px;
+}
+
+.credits-dialog__footnote {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  font-size: 0.82rem !important;
+}
+
+.credits-dialog__footnote code {
+  color: #ffd45a;
+  background: rgb(255 255 255 / 8%);
+}
+
 .game-controls {
   margin: 20px 0;
 }
