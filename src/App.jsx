@@ -41,6 +41,11 @@ import { formatMatchStatus, getMatchAlert } from './game/matchAlert.js'
 import { PromotionPicker } from './components/PromotionPicker.jsx'
 import { getPromotionOptions } from './game/promotion.js'
 import { clearedPresentationState } from './game/presentation.js'
+import {
+  resolveKeyboardShortcut,
+  shortcutHintLabel,
+  SHORTCUT_ACTIONS,
+} from './game/keyboardShortcuts.js'
 
 const depthMap = {
   easy: 5,
@@ -129,6 +134,39 @@ export default function App() {
     },
     [botRequestGuard],
   )
+
+  // Keep latest handlers without re-binding the window listener every render.
+  const shortcutHandlersRef = useRef({
+    undo: () => {},
+    redo: () => {},
+    flip: () => {},
+    clearSelection: () => {},
+    hasSelection: false,
+    modalOpen: false,
+  })
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const handlers = shortcutHandlersRef.current
+      const action = resolveKeyboardShortcut(event, {
+        hasSelection: handlers.hasSelection,
+        modalOpen: handlers.modalOpen,
+        root: document,
+      })
+      if (!action) return
+
+      event.preventDefault()
+      if (action === SHORTCUT_ACTIONS.undo) handlers.undo()
+      else if (action === SHORTCUT_ACTIONS.redo) handlers.redo()
+      else if (action === SHORTCUT_ACTIONS.flip) handlers.flip()
+      else if (action === SHORTCUT_ACTIONS.clearSelection) {
+        handlers.clearSelection()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   const updateScreen = () => {
     refresh((number) => number + 1)
@@ -394,6 +432,15 @@ export default function App() {
     }
   }
 
+  shortcutHandlersRef.current = {
+    undo: undoMove,
+    redo: redoMove,
+    flip: () => setOrientation((current) => (current === 'w' ? 'b' : 'w')),
+    clearSelection,
+    hasSelection: Boolean(selected),
+    modalOpen: Boolean(pendingPromotion),
+  }
+
   const changeTimeControl = (controlId) => {
     invalidateBotMove()
     chess.reset()
@@ -475,26 +522,38 @@ export default function App() {
     <main className="game-shell">
       <h1>⚔️ BATTLE CHESS</h1>
       <p>Real chess underneath. A cinematic war game on top.</p>
+      <p className="visually-hidden">
+        Keyboard shortcuts: {shortcutHintLabel(SHORTCUT_ACTIONS.undo)} undo,{' '}
+        {shortcutHintLabel(SHORTCUT_ACTIONS.redo)} redo,{' '}
+        {shortcutHintLabel(SHORTCUT_ACTIONS.flip)} flip board,{' '}
+        {shortcutHintLabel(SHORTCUT_ACTIONS.clearSelection)} clear selection.
+      </p>
 
       <div className="game-controls">
         <button onClick={() => changeMode('human')}>Human vs Human</button>
         <button onClick={() => changeMode('bot')}>Human vs Bot</button>
         <button onClick={resetGame}>Reset Match</button>
         <button
+          aria-keyshortcuts="Control+Z Meta+Z"
           disabled={!historyController.canUndo(mode, playerColor)}
           onClick={undoMove}
+          title={`Undo (${shortcutHintLabel(SHORTCUT_ACTIONS.undo)})`}
         >
           Undo
         </button>
         <button
+          aria-keyshortcuts="Control+Y Meta+Y Control+Shift+Z Meta+Shift+Z"
           disabled={!historyController.canRedo()}
           onClick={redoMove}
+          title={`Redo (${shortcutHintLabel(SHORTCUT_ACTIONS.redo)})`}
         >
           Redo
         </button>
         <button
+          aria-keyshortcuts="F"
           aria-label={`Show ${orientation === 'w' ? 'Black' : 'White'} at the bottom`}
           onClick={() => setOrientation(orientation === 'w' ? 'b' : 'w')}
+          title={`Flip board (${shortcutHintLabel(SHORTCUT_ACTIONS.flip)})`}
         >
           Flip Board
         </button>
