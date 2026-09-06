@@ -3,6 +3,21 @@ const oppositeColor = {
   b: 'w',
 }
 
+/** chess.js castle flags: 'k' kingside, 'q' queenside. */
+function castlingCompanion(move) {
+  if (!move?.flags) return null
+  const kingside = move.flags.includes('k')
+  const queenside = move.flags.includes('q')
+  if (!kingside && !queenside) return null
+
+  const rank = move.from[1]
+  return {
+    piece: { type: 'r', color: move.color },
+    from: kingside ? `h${rank}` : `a${rank}`,
+    to: kingside ? `f${rank}` : `d${rank}`,
+  }
+}
+
 export function createCaptureEvent(move, id = 0) {
   if (!move?.captured) return null
 
@@ -30,6 +45,10 @@ export function createCaptureEvent(move, id = 0) {
 export function createQuietMoveEvent(move, id = 0) {
   if (!move || move.captured) return null
 
+  const companions = []
+  const rook = castlingCompanion(move)
+  if (rook) companions.push(rook)
+
   return {
     id,
     type: 'move',
@@ -41,6 +60,7 @@ export function createQuietMoveEvent(move, id = 0) {
     from: move.from,
     to: move.to,
     promotion: move.promotion ?? null,
+    companions,
   }
 }
 

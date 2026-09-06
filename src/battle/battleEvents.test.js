@@ -65,6 +65,37 @@ describe('battle presentation events', () => {
       from: 'e2',
       to: 'e4',
       promotion: null,
+      companions: [],
+    })
+  })
+
+  it('adds a rook companion for kingside castling', () => {
+    const chess = new Chess(
+      'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
+    )
+    const move = chess.move('O-O')
+    expect(createQuietMoveEvent(move, 9)).toMatchObject({
+      piece: { type: 'k', color: 'w' },
+      from: 'e1',
+      to: 'g1',
+      companions: [
+        { piece: { type: 'r', color: 'w' }, from: 'h1', to: 'f1' },
+      ],
+    })
+  })
+
+  it('adds a rook companion for queenside castling', () => {
+    const chess = new Chess(
+      'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
+    )
+    const move = chess.move('O-O-O')
+    expect(createQuietMoveEvent(move)).toMatchObject({
+      piece: { type: 'k', color: 'w' },
+      from: 'e1',
+      to: 'c1',
+      companions: [
+        { piece: { type: 'r', color: 'w' }, from: 'a1', to: 'd1' },
+      ],
     })
   })
 

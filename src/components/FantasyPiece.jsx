@@ -67,7 +67,7 @@ function useIvoryPiece(type) {
   return { scene: rigged.scene, animations }
 }
 
-export function FantasyPiece({ piece, selected = false, action = 'idle' }) {
+export function FantasyPiece({ piece, selected = false, action = 'idle', yaw }) {
   const { scene, animations } = useIvoryPiece(piece.type)
   const { camera } = useThree()
   const lodTick = useRef(0)
@@ -135,10 +135,12 @@ export function FantasyPiece({ piece, selected = false, action = 'idle' }) {
   const ringInner = 0.28
   const ringOuter = 0.36
 
+  const facing = yaw ?? (piece.color === 'b' ? Math.PI : 0)
+
   return (
     <group
       position-y={BOARD_SURFACE_Y}
-      rotation-y={piece.color === 'b' ? Math.PI : 0}
+      rotation-y={facing}
     >
       <primitive object={actor} dispose={null} />
       <mesh position-y={0.01} rotation-x={-Math.PI / 2}>

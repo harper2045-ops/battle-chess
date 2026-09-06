@@ -3,8 +3,10 @@ import { squareToWorld } from './captureAnimation.js'
 import {
   getQuietMoveAction,
   getQuietMovePose,
+  getQuietMoveYaw,
   quietMoveDistance,
   quietMoveDuration,
+  restingYaw,
 } from './moveAnimation.js'
 
 describe('3D quiet move presentation', () => {
@@ -42,5 +44,17 @@ describe('3D quiet move presentation', () => {
     expect(getQuietMovePose(event, 0)[1]).toBeCloseTo(0)
     expect(getQuietMovePose(event, 0.5)[1]).toBeGreaterThan(0.2)
     expect(getQuietMovePose(event, 1)[1]).toBeCloseTo(0)
+  })
+
+  it('yaws toward the destination while walking then settles', () => {
+    const event = { from: 'a2', to: 'a4' }
+    // a-file north: dx=0, dz negative → travel yaw 0 for white
+    expect(getQuietMoveYaw(event, 0.5, 'w')).toBeCloseTo(0)
+    expect(getQuietMoveYaw(event, 1, 'w')).toBeCloseTo(restingYaw('w'))
+
+    const lateral = { from: 'e2', to: 'h2' }
+    // east along rank: +X → yaw toward +X from -Z forward ≈ +PI/2
+    expect(getQuietMoveYaw(lateral, 0.4, 'w')).toBeCloseTo(Math.PI / 2)
+    expect(getQuietMoveYaw(lateral, 1, 'b')).toBeCloseTo(restingYaw('b'))
   })
 })
