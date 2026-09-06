@@ -412,9 +412,16 @@ export default function App() {
     }
   }
 
+  const pgnExportMeta = () => ({
+    mode,
+    playerColor,
+    difficulty,
+    matchResult,
+  })
+
   const copyGamePgn = async () => {
     try {
-      await copyPgn(getGamePgn(chess), navigator.clipboard)
+      await copyPgn(getGamePgn(chess, pgnExportMeta()), navigator.clipboard)
       setCopyStatus('PGN copied')
     } catch {
       setCopyStatus('Unable to copy PGN')
@@ -422,7 +429,7 @@ export default function App() {
   }
 
   const downloadGamePgn = () => {
-    const pgn = getGamePgn(chess)
+    const pgn = getGamePgn(chess, pgnExportMeta())
     if (!pgn) return
 
     const url = URL.createObjectURL(
