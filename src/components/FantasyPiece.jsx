@@ -1,25 +1,20 @@
-import { useEffect, useMemo } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useEffect, useMemo, useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat } from 'three'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
+import { normalizeIvoryActor } from './ivoryNormalize.js'
 
 const PIECE_TYPES = ['k', 'q', 'b', 'n', 'r', 'p']
 
+/** ChessBoard3D square top sits at y ≈ 0.04 (mesh at -0.02, height 0.12). */
+const BOARD_SURFACE_Y = 0.04
+
 /**
- * Scale tuned for King's Gambit Ivory humanoids on a 1-unit square board.
- * Generated sculpts are roughly human height (~1.6–1.8 m). Target on-board
- * heights: pawn ~0.8, officers ~0.95, royals ~1.05–1.1 (similar to the
- * ainan9274/rork-medieval-3d-chess PIECE_HEIGHT tiers).
+ * OrbitControls sit between ~7–13 from origin. Beyond this distance, idle
+ * mixers tick at half rate — cheap LOD without a second mesh set.
  */
-const scaleByType = {
-  p: 0.48,
-  n: 0.56,
-  b: 0.56,
-  r: 0.55,
-  q: 0.58,
-  k: 0.62,
-}
+const IDLE_LOD_DISTANCE = 11
 
 const teamColor = {
   w: '#f2ddad',
@@ -74,20 +69,31 @@ function useIvoryPiece(type) {
 
 export function FantasyPiece({ piece, selected = false, action = 'idle' }) {
   const { scene, animations } = useIvoryPiece(piece.type)
-  const actor = useMemo(() => {
+  const { camera } = useThree()
+  const lodTick = useRef(0)
+
+  const { actor, crownY } = useMemo(() => {
     const instance = clone(scene)
 
     instance.traverse((node) => {
       if (!node.isMesh) return
+      // Shadows stay off — board already runs without a shadow map.
       node.castShadow = false
       node.receiveShadow = false
       if (node.material) {
         node.material = node.material.clone()
+        // Slightly cheaper default lighting response for 32 humanoids.
+        if ('metalness' in node.material) {
+          node.material.metalness = Math.min(node.material.metalness ?? 0, 0.35)
+          node.material.envMapIntensity = 0.55
+        }
       }
     })
 
-    return instance
-  }, [scene])
+    const { height } = normalizeIvoryActor(instance, piece.type)
+    return { actor: instance, crownY: height + 0.08 }
+  }, [scene, piece.type])
+
   const mixer = useMemo(() => new AnimationMixer(actor), [actor])
 
   useEffect(() => {
@@ -112,19 +118,32 @@ export function FantasyPiece({ piece, selected = false, action = 'idle' }) {
   }, [action, animations, mixer])
 
   useFrame((_, delta) => {
+    // Cheap distance LOD: half-rate idle ticks when the camera is pulled back.
+    // Capture / selection always run at full rate so fights stay crisp.
+    if (action === 'idle' && !selected) {
+      const dist = camera.position.length()
+      if (dist > IDLE_LOD_DISTANCE) {
+        lodTick.current += 1
+        if (lodTick.current % 2 === 1) return
+        mixer.update(delta * 2)
+        return
+      }
+    }
     mixer.update(delta)
   })
 
+  // Ring radii in world units (group is unscaled — actor carries the normalize).
+  const ringInner = 0.28
+  const ringOuter = 0.36
+
   return (
     <group
-      position-y={0.02}
+      position-y={BOARD_SURFACE_Y}
       rotation-y={piece.color === 'b' ? Math.PI : 0}
-      scale={scaleByType[piece.type]}
     >
       <primitive object={actor} dispose={null} />
-      {/* Ring radii retuned for ~0.5–0.6 scale (was sized for Quaternius ~0.35). */}
-      <mesh position-y={0.02} rotation-x={-Math.PI / 2}>
-        <ringGeometry args={[0.52, 0.64, 24]} />
+      <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
+        <ringGeometry args={[ringInner, ringOuter, 24]} />
         <meshBasicMaterial
           color={selected ? '#ffd45a' : teamColor[piece.color]}
           transparent
@@ -132,8 +151,7 @@ export function FantasyPiece({ piece, selected = false, action = 'idle' }) {
         />
       </mesh>
       {(piece.type === 'q' || piece.type === 'k') && (
-        // Crown marker sits just above a ~1.7-unit humanoid (was 4.2 for taller Quaternius units).
-        <mesh position-y={1.95} rotation-x={Math.PI / 2}>
+        <mesh position-y={crownY} rotation-x={Math.PI / 2}>
           <torusGeometry args={[0.14, 0.04, 8, 16]} />
           <meshStandardMaterial
             color={piece.type === 'k' ? '#ffd45a' : '#d995ff'}
