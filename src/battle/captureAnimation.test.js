@@ -31,6 +31,40 @@ describe('3D capture presentation', () => {
     expect(end.defenderRotation).toBeCloseTo(1.35)
   })
 
+  it('lunges toward the defender square on en passant, then settles onto to', () => {
+    const event = { from: 'e5', to: 'd6', defenderSquare: 'd5' }
+    const mid = getCapturePose(event, 0.5)
+    const end = getCapturePose(event, 1)
+    const from = squareToWorld('e5')
+    const combat = squareToWorld('d5')
+    const to = squareToWorld('d6')
+
+    // Mid-strike: closer to the captured pawn than to the empty landing square.
+    const midDistCombat = Math.hypot(mid.attacker[0] - combat[0], mid.attacker[2] - combat[2])
+    const midDistTo = Math.hypot(mid.attacker[0] - to[0], mid.attacker[2] - to[2])
+    expect(midDistCombat).toBeLessThan(midDistTo)
+
+    // After settle: near the chess landing square, not stuck on the pawn file.
+    expect(end.attacker[0]).toBeCloseTo(to[0], 1)
+    expect(end.attacker[2]).toBeCloseTo(to[2], 1)
+    expect(end.attacker[0]).not.toBeCloseTo(from[0], 1)
+  })
+
+  it('keeps normal captures lunging toward to when it equals defenderSquare', () => {
+    const event = { from: 'e4', to: 'd5', defenderSquare: 'd5' }
+    const mid = getCapturePose(event, 0.5)
+    const to = squareToWorld('d5')
+    const from = squareToWorld('e4')
+
+    // Progress toward destination along both axes.
+    expect(Math.abs(mid.attacker[0] - to[0])).toBeLessThan(
+      Math.abs(from[0] - to[0]),
+    )
+    expect(Math.abs(mid.attacker[2] - to[2])).toBeLessThan(
+      Math.abs(from[2] - to[2]),
+    )
+  })
+
   it('sequences humanoid attack, hit, and death clips', () => {
     expect(getCaptureActions(0)).toEqual({ attacker: 'idle', defender: 'idle' })
     expect(getCaptureActions(0.3)).toEqual({ attacker: 'attack', defender: 'hit' })
