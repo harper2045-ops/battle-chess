@@ -35,6 +35,8 @@ import { isBotTurn } from './game/player.js'
 import { createClockController } from './game/clock.js'
 import { useGameClock } from './hooks/useGameClock.js'
 import { CreditsPanel } from './components/CreditsPanel.jsx'
+import { PromotionPicker } from './components/PromotionPicker.jsx'
+import { getPromotionOptions } from './game/promotion.js'
 
 const depthMap = {
   easy: 5,
@@ -67,6 +69,7 @@ export default function App() {
   const [activeMove, setActiveMove] = useState(null)
   const [copyStatus, setCopyStatus] = useState('')
   const [timeControl, setTimeControl] = useState('untimed')
+  const [pendingPromotion, setPendingPromotion] = useState(null)
 
   const clearSelection = useCallback(() => {
     setSelected(null)
@@ -208,8 +211,46 @@ export default function App() {
     )
   }
 
+  const commitPlayerMove = (from, to, promotion) => {
+    try {
+      const move = chess.move({
+        from,
+        to,
+        ...(promotion ? { promotion } : {}),
+      })
+
+      if (!move) {
+        clearSelection()
+        setPendingPromotion(null)
+        return
+      }
+
+      clearSelection()
+      setPendingPromotion(null)
+      recordMove(move)
+
+      if (
+        isBotTurn(mode, playerColor, chess.turn()) &&
+        !chess.isGameOver()
+      ) {
+        scheduleBotMove()
+      }
+    } catch (error) {
+      console.warn(error)
+      clearSelection()
+      setPendingPromotion(null)
+    }
+  }
+
   const handleClick = (square) => {
-    if (thinking || chess.isGameOver() || matchResult) return
+    if (
+      thinking ||
+      chess.isGameOver() ||
+      matchResult ||
+      pendingPromotion
+    ) {
+      return
+    }
 
     if (refreshClock().timedOutColor) return
 
@@ -226,31 +267,34 @@ export default function App() {
       return
     }
 
-    try {
-      const move = chess.move({
+    const promotionOptions = getPromotionOptions(chess, selected, square)
+    if (promotionOptions) {
+      setPendingPromotion({
         from: selected,
         to: square,
-        promotion: 'q',
+        color: chess.turn(),
+        options: promotionOptions,
       })
-
-      if (!move) {
-        clearSelection()
-        return
-      }
-
-      clearSelection()
-      recordMove(move)
-
-      if (
-        isBotTurn(mode, playerColor, chess.turn()) &&
-        !chess.isGameOver()
-      ) {
-        scheduleBotMove()
-      }
-    } catch (error) {
-      console.warn(error)
-      clearSelection()
+      return
     }
+
+    commitPlayerMove(selected, square)
+  }
+
+  const choosePromotion = (promotion) => {
+    if (!pendingPromotion) return
+    commitPlayerMove(
+      pendingPromotion.from,
+      pendingPromotion.to,
+      promotion,
+    )
+  }
+
+  const cancelPromotion = () => {
+    if (!pendingPromotion) return
+    const from = pendingPromotion.from
+    setPendingPromotion(null)
+    selectPiece(from)
   }
 
   const resetGame = () => {
@@ -261,6 +305,7 @@ export default function App() {
     setBattleEvent(null)
     setActiveCapture(null)
     setActiveMove(null)
+    setPendingPromotion(null)
     setCopyStatus('')
     setThinking(false)
     resetClock()
@@ -287,6 +332,7 @@ export default function App() {
     setBattleEvent(null)
     setActiveCapture(null)
     setActiveMove(null)
+    setPendingPromotion(null)
     setCopyStatus('')
     setThinking(false)
     resetClock()
@@ -308,6 +354,7 @@ export default function App() {
     setBattleEvent(null)
     setActiveCapture(null)
     setActiveMove(null)
+    setPendingPromotion(null)
     setCopyStatus('')
     setThinking(false)
     resetClock()
@@ -322,6 +369,7 @@ export default function App() {
     setBattleEvent(null)
     setActiveCapture(null)
     setActiveMove(null)
+    setPendingPromotion(null)
     setCopyStatus('')
     setThinking(false)
     clearMatchResult()
@@ -362,6 +410,7 @@ export default function App() {
     setBattleEvent(null)
     setActiveCapture(null)
     setActiveMove(null)
+    setPendingPromotion(null)
     setCopyStatus('')
     setThinking(false)
     resetClock(controlId)
@@ -516,6 +565,15 @@ export default function App() {
 
       <ChessClocks orientation={orientation} state={clockState} />
 
+      {pendingPromotion ? (
+        <PromotionPicker
+          color={pendingPromotion.color}
+          onCancel={cancelPromotion}
+          onChoose={choosePromotion}
+          options={pendingPromotion.options}
+        />
+      ) : null}
+
       <ChessBoard3D
         board={board}
         orientation={orientation}
@@ -523,7 +581,12 @@ export default function App() {
         legalMoves={legalMoves}
         activeCapture={activeCapture}
         activeMove={activeMove}
-        disabled={thinking || chess.isGameOver() || Boolean(matchResult)}
+        disabled={
+          thinking ||
+          chess.isGameOver() ||
+          Boolean(matchResult) ||
+          Boolean(pendingPromotion)
+        }
         feedback={matchFeedback}
         onSquareClick={handleClick}
         onCaptureComplete={completeCapture}

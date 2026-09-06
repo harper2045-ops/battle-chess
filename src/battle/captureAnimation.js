@@ -42,3 +42,12 @@ export function getCapturePose(event, progress) {
     defenderRotation: defeat * 1.35,
   }
 }
+
+/** After the lunge lands, promotion captures reveal the chosen fantasy piece. */
+export function getCaptureAttackerPiece(event, progress) {
+  const t = Math.max(0, Math.min(1, progress))
+  if (event?.promotion && t >= 0.72) {
+    return { ...event.attacker, type: event.promotion }
+  }
+  return event.attacker
+}
