@@ -564,6 +564,29 @@ button {
   touch-action: none;
 }
 
+.board-touch-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  z-index: 2;
+  margin: 0;
+  padding: 4px 10px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgb(12 14 22 / 72%);
+  color: #e8dfc8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.chess-board-3d--coarse {
+  aspect-ratio: 1 / 1;
+  width: min(96vw, 760px);
+}
+
 .chess-board-3d--check {
   border-color: #9a651f;
   box-shadow: 0 0 28px rgb(255 166 35 / 38%), 0 18px 55px rgb(0 0 0 / 60%);
@@ -841,6 +864,16 @@ button {
 @media (max-width: 600px) {
   .game-shell {
     padding: 16px 10px 24px;
+  }
+
+  .chess-board-3d {
+    width: min(96vw, 760px);
+    aspect-ratio: 1 / 1;
+  }
+
+  .board-touch-hint {
+    font-size: 0.68rem;
+    bottom: 8px;
   }
 
   .battle-banner {
