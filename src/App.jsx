@@ -36,6 +36,8 @@ import { createClockController } from './game/clock.js'
 import { useGameClock } from './hooks/useGameClock.js'
 import { CreditsPanel } from './components/CreditsPanel.jsx'
 import { BotThinking } from './components/BotThinking.jsx'
+import { MatchAlertBanner } from './components/MatchAlertBanner.jsx'
+import { formatMatchStatus, getMatchAlert } from './game/matchAlert.js'
 import { PromotionPicker } from './components/PromotionPicker.jsx'
 import { getPromotionOptions } from './game/promotion.js'
 import { clearedPresentationState } from './game/presentation.js'
@@ -454,19 +456,20 @@ export default function App() {
     )
   }, [])
 
-  const status = () => {
-    if (matchResult?.type === 'timeout') {
-      return `${matchResult.winner === 'w' ? 'White' : 'Black'} wins on TIME`
-    }
-    if (chess.isCheckmate()) {
-      return `CHECKMATE — ${chess.turn() === 'w' ? 'Black' : 'White'} wins`
-    }
-    if (chess.isDraw()) return 'DRAW'
-    if (chess.inCheck()) {
-      return `${chess.turn() === 'w' ? 'White' : 'Black'} is in CHECK`
-    }
-    return `${chess.turn() === 'w' ? 'White' : 'Black'} to move`
-  }
+  const matchAlert = getMatchAlert({
+    feedback,
+    matchResult,
+    turn: chess.turn(),
+    isDraw: chess.isDraw(),
+  })
+
+  const status = () =>
+    formatMatchStatus({
+      feedback,
+      matchResult,
+      turn: chess.turn(),
+      isDraw: chess.isDraw(),
+    })
 
   return (
     <main className="game-shell">
@@ -555,6 +558,8 @@ export default function App() {
       </h2>
 
       <BotThinking active={thinking} difficulty={difficulty} />
+
+      <MatchAlertBanner alert={matchAlert} />
 
       <BattleBanner event={battleEvent} />
 
