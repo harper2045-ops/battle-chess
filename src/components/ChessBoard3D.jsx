@@ -19,6 +19,11 @@ import {
   isLastMoveSquare,
   squareHighlightColor,
 } from '../game/lastMove.js'
+import {
+  detectCoarsePointer,
+  getOrbitTouches,
+  getSquareHitHeight,
+} from '../game/boardInput.js'
 
 const pieceNames = {
   p: 'Pawn',
@@ -41,6 +46,21 @@ function useReducedMotion() {
   }, [])
 
   return reduced
+}
+
+function useCoarsePointer() {
+  const [coarse, setCoarse] = useState(() => detectCoarsePointer())
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined
+    const media = window.matchMedia('(pointer: coarse)')
+    const update = () => setCoarse(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  return coarse
 }
 
 function Material({ color, selected = false }) {
@@ -323,8 +343,14 @@ function Scene({
   onCaptureComplete,
   onMoveComplete,
   reducedMotion,
+  coarsePointer,
 }) {
   const legal = useMemo(() => new Set(legalMoves), [legalMoves])
+  const orbitTouches = useMemo(
+    () => getOrbitTouches(coarsePointer),
+    [coarsePointer],
+  )
+  const hitHeight = getSquareHitHeight(coarsePointer)
 
   return (
     <>
@@ -364,6 +390,10 @@ function Scene({
               event.stopPropagation()
               if (!disabled) onSquareClick(square)
             }}
+            onPointerDown={(event) => {
+              // Keep R3F from treating the tap as a drag start competing with OrbitControls.
+              if (event.pointerType === 'touch') event.stopPropagation()
+            }}
           >
             <mesh position-y={-0.02}>
               <boxGeometry args={[0.99, 0.12, 0.99]} />
@@ -379,6 +409,11 @@ function Scene({
                 emissiveIntensity={isLastMove && !isSelected && !isLegal ? 0.22 : 0}
               />
             </mesh>
+            {coarsePointer ? (
+              <mesh position-y={hitHeight / 2} visible={false}>
+                <boxGeometry args={[0.99, hitHeight, 0.99]} />
+              </mesh>
+            ) : null}
             {isLegal && !piece && (
               <mesh position-y={0.06} rotation-x={-Math.PI / 2}>
                 <circleGeometry args={[0.14, 20]} />
@@ -416,6 +451,7 @@ function Scene({
         maxDistance={13}
         minPolarAngle={0.55}
         maxPolarAngle={1.25}
+        touches={orbitTouches}
       />
     </>
   )
@@ -436,11 +472,12 @@ export function ChessBoard3D({
   onMoveComplete,
 }) {
   const reducedMotion = useReducedMotion()
+  const coarsePointer = useCoarsePointer()
   const animating = Boolean(activeCapture || activeMove)
 
   return (
     <div
-      className={`chess-board-3d chess-board-3d--${feedback}${activeCapture ? ' chess-board-3d--battle' : ''}`}
+      className={`chess-board-3d chess-board-3d--${feedback}${activeCapture ? ' chess-board-3d--battle' : ''}${coarsePointer ? ' chess-board-3d--coarse' : ''}`}
     >
       <Canvas
         aria-label="Interactive 3D chess board"
@@ -461,8 +498,15 @@ export function ChessBoard3D({
           onCaptureComplete={onCaptureComplete}
           onMoveComplete={onMoveComplete}
           reducedMotion={reducedMotion}
+          coarsePointer={coarsePointer}
         />
       </Canvas>
+
+      {coarsePointer ? (
+        <p className="board-touch-hint" aria-hidden="true">
+          Tap to move · two-finger drag to orbit
+        </p>
+      ) : null}
 
       <div className="board-accessible-controls" role="grid" aria-label="Chess board controls">
         {board.flat().map(({ piece, square }) => (
