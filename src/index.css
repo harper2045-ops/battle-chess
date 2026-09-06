@@ -500,6 +500,20 @@ button {
   background: rgb(126 35 28 / 55%);
 }
 
+.chess-clock--low {
+  border-color: #ff9a4a;
+  background: rgb(126 62 18 / 42%);
+  color: #ffd7b0;
+}
+
+.chess-clock--low strong {
+  color: #ffe0c2;
+}
+
+.chess-clock--low.chess-clock--active {
+  animation: clock-low-pulse 900ms ease-in-out infinite;
+}
+
 .board-square {
   position: relative;
   display: flex;
@@ -645,11 +659,18 @@ button {
   }
 }
 
+@keyframes clock-low-pulse {
+  50% {
+    filter: brightness(1.18);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .battle-banner__event,
   .battle-impact,
   .chess-board--check,
-  .chess-board-3d--check {
+  .chess-board-3d--check,
+  .chess-clock--low.chess-clock--active {
     animation: none;
   }
 

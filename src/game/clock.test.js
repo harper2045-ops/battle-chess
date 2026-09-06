@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createClockController, formatClock } from './clock.js'
+import {
+  createClockController,
+  formatClock,
+  isLowTime,
+} from './clock.js'
 
 function createTestClock(controlId = '3+2') {
   let timestamp = 0
@@ -120,7 +124,19 @@ describe('match clock', () => {
   it('formats remaining time for display', () => {
     expect(formatClock(180_000)).toBe('3:00')
     expect(formatClock(61_001)).toBe('1:02')
-    expect(formatClock(0)).toBe('0:00')
+    expect(formatClock(10_000)).toBe('0:10')
+    expect(formatClock(9_999)).toBe('0:09.9')
+    expect(formatClock(1_050)).toBe('0:01.0')
+    expect(formatClock(99)).toBe('0:00.0')
+    expect(formatClock(0)).toBe('0:00.0')
     expect(formatClock(null)).toBe('--:--')
+  })
+
+  it('flags low time under thirty seconds', () => {
+    expect(isLowTime(30_000)).toBe(false)
+    expect(isLowTime(29_999)).toBe(true)
+    expect(isLowTime(1)).toBe(true)
+    expect(isLowTime(0)).toBe(false)
+    expect(isLowTime(null)).toBe(false)
   })
 })
