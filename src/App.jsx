@@ -52,6 +52,11 @@ import {
   createSoundController,
   resolveMoveSound,
 } from './game/sound.js'
+import {
+  defaultSettingsStorage,
+  readSettings,
+  writeSettings,
+} from './game/settings.js'
 
 const depthMap = {
   easy: 5,
@@ -60,6 +65,11 @@ const depthMap = {
 }
 
 export default function App() {
+  const settingsStorage = useMemo(() => defaultSettingsStorage(), [])
+  const initialSettings = useMemo(
+    () => readSettings(settingsStorage),
+    [settingsStorage],
+  )
   const chess = useMemo(() => new Chess(), [])
   const historyController = useMemo(
     () => createHistoryController(chess),
@@ -68,16 +78,16 @@ export default function App() {
   const botRequestGuard = useMemo(() => createBotRequestGuard(), [])
   const clockController = useMemo(() => createClockController(), [])
   const botTimer = useRef(null)
-  const modeRef = useRef('human')
-  const playerColorRef = useRef('w')
+  const modeRef = useRef(initialSettings.mode)
+  const playerColorRef = useRef(initialSettings.playerColor)
   const battleId = useRef(0)
   const [, refresh] = useState(0)
-  const [difficulty, setDifficulty] = useState('medium')
+  const [difficulty, setDifficulty] = useState(initialSettings.difficulty)
   const [selected, setSelected] = useState(null)
   const [legalMoves, setLegalMoves] = useState([])
-  const [mode, setMode] = useState('human')
-  const [orientation, setOrientation] = useState('w')
-  const [playerColor, setPlayerColor] = useState('w')
+  const [mode, setMode] = useState(initialSettings.mode)
+  const [orientation, setOrientation] = useState(initialSettings.playerColor)
+  const [playerColor, setPlayerColor] = useState(initialSettings.playerColor)
   const [thinking, setThinking] = useState(false)
   const [battleEvent, setBattleEvent] = useState(null)
   const [activeCapture, setActiveCapture] = useState(null)
@@ -106,6 +116,18 @@ export default function App() {
     setThinking(cleared.thinking)
     setPendingPromotion(null)
   }, [])
+
+  const persistSettings = useCallback(
+    (patch = {}) => {
+      writeSettings(settingsStorage, {
+        mode: modeRef.current,
+        difficulty,
+        playerColor: playerColorRef.current,
+        ...patch,
+      })
+    },
+    [difficulty, settingsStorage],
+  )
 
   const invalidateBotMove = useCallback(() => {
     botRequestGuard.invalidate()
@@ -285,6 +307,21 @@ export default function App() {
     )
   }
 
+  // Restored bot + Black: White (bot) moves first after reload.
+  useEffect(() => {
+    if (
+      isBotTurn(
+        modeRef.current,
+        playerColorRef.current,
+        chess.turn(),
+      )
+    ) {
+      scheduleBotMove()
+    }
+    // Mount-only: prefs already applied from localStorage above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const commitPlayerMove = (from, to, promotion) => {
     try {
       const move = chess.move({
@@ -396,6 +433,7 @@ export default function App() {
     historyController.clear()
     modeRef.current = newMode
     setMode(newMode)
+    persistSettings({ mode: newMode })
     clearPresentationState()
     resetClock()
     updateScreen()
@@ -412,6 +450,7 @@ export default function App() {
     playerColorRef.current = color
     setPlayerColor(color)
     setOrientation(color)
+    persistSettings({ playerColor: color })
     clearPresentationState()
     resetClock()
     updateScreen()
@@ -607,7 +646,10 @@ export default function App() {
                 <button
                   aria-pressed={difficulty === level}
                   key={level}
-                  onClick={() => setDifficulty(level)}
+                  onClick={() => {
+                    setDifficulty(level)
+                    persistSettings({ difficulty: level })
+                  }}
                   style={difficultyButtonStyle(difficulty === level)}
                 >
                   {level[0].toUpperCase() + level.slice(1)}
