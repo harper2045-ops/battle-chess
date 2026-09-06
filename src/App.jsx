@@ -37,6 +37,7 @@ import { useGameClock } from './hooks/useGameClock.js'
 import { CreditsPanel } from './components/CreditsPanel.jsx'
 import { PromotionPicker } from './components/PromotionPicker.jsx'
 import { getPromotionOptions } from './game/promotion.js'
+import { clearedPresentationState } from './game/presentation.js'
 
 const depthMap = {
   easy: 5,
@@ -76,6 +77,20 @@ export default function App() {
     setLegalMoves([])
   }, [])
 
+  // Shared reset for selection + in-flight battle/move presentation so
+  // undo/reset/mode changes/timeout never leave desynced animated pieces.
+  const clearPresentationState = useCallback(() => {
+    const cleared = clearedPresentationState()
+    setSelected(cleared.selected)
+    setLegalMoves(cleared.legalMoves)
+    setBattleEvent(cleared.battleEvent)
+    setActiveCapture(cleared.activeCapture)
+    setActiveMove(cleared.activeMove)
+    setCopyStatus(cleared.copyStatus)
+    setThinking(cleared.thinking)
+    setPendingPromotion(null)
+  }, [])
+
   const invalidateBotMove = useCallback(() => {
     botRequestGuard.invalidate()
     clearTimeout(botTimer.current)
@@ -85,9 +100,8 @@ export default function App() {
 
   const onClockTimeout = useCallback(() => {
     invalidateBotMove()
-    clearSelection()
-    setThinking(false)
-  }, [clearSelection, invalidateBotMove])
+    clearPresentationState()
+  }, [clearPresentationState, invalidateBotMove])
 
   const {
     clockState,
@@ -301,13 +315,7 @@ export default function App() {
     invalidateBotMove()
     chess.reset()
     historyController.clear()
-    clearSelection()
-    setBattleEvent(null)
-    setActiveCapture(null)
-    setActiveMove(null)
-    setPendingPromotion(null)
-    setCopyStatus('')
-    setThinking(false)
+    clearPresentationState()
     resetClock()
     updateScreen()
 
@@ -328,13 +336,7 @@ export default function App() {
     historyController.clear()
     modeRef.current = newMode
     setMode(newMode)
-    clearSelection()
-    setBattleEvent(null)
-    setActiveCapture(null)
-    setActiveMove(null)
-    setPendingPromotion(null)
-    setCopyStatus('')
-    setThinking(false)
+    clearPresentationState()
     resetClock()
     updateScreen()
 
@@ -350,13 +352,7 @@ export default function App() {
     playerColorRef.current = color
     setPlayerColor(color)
     setOrientation(color)
-    clearSelection()
-    setBattleEvent(null)
-    setActiveCapture(null)
-    setActiveMove(null)
-    setPendingPromotion(null)
-    setCopyStatus('')
-    setThinking(false)
+    clearPresentationState()
     resetClock()
     updateScreen()
 
@@ -365,13 +361,7 @@ export default function App() {
 
   const prepareHistoryChange = () => {
     invalidateBotMove()
-    clearSelection()
-    setBattleEvent(null)
-    setActiveCapture(null)
-    setActiveMove(null)
-    setPendingPromotion(null)
-    setCopyStatus('')
-    setThinking(false)
+    clearPresentationState()
     clearMatchResult()
   }
 
@@ -406,13 +396,7 @@ export default function App() {
     chess.reset()
     historyController.clear()
     setTimeControl(controlId)
-    clearSelection()
-    setBattleEvent(null)
-    setActiveCapture(null)
-    setActiveMove(null)
-    setPendingPromotion(null)
-    setCopyStatus('')
-    setThinking(false)
+    clearPresentationState()
     resetClock(controlId)
     updateScreen()
 
