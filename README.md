@@ -11,7 +11,8 @@ and an optional Stockfish opponent.
 - Human vs Human and Human vs Bot play, with Easy / Medium / Hard Stockfish
   difficulty.
 - Legal move generation and game state via [chess.js](https://github.com/jhlywa/chess.js).
-- Animated 3D board and fantasy armies built with
+- Animated 3D board with King’s Gambit **Ivory Kingdom** fantasy pieces
+  (see [`CREDITS.md`](./CREDITS.md)), built with
   [react-three-fiber](https://github.com/pmndrs/react-three-fiber) and
   [drei](https://github.com/pmndrs/drei).
 - Structured battle events (captures, check, checkmate) that drive banners
