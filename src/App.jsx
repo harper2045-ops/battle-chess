@@ -47,6 +47,11 @@ import {
   shortcutHintLabel,
   SHORTCUT_ACTIONS,
 } from './game/keyboardShortcuts.js'
+import {
+  SOUND_KINDS,
+  createSoundController,
+  resolveMoveSound,
+} from './game/sound.js'
 
 const depthMap = {
   easy: 5,
@@ -80,6 +85,8 @@ export default function App() {
   const [copyStatus, setCopyStatus] = useState('')
   const [timeControl, setTimeControl] = useState('untimed')
   const [pendingPromotion, setPendingPromotion] = useState(null)
+  const soundController = useMemo(() => createSoundController(), [])
+  const [soundMuted, setSoundMuted] = useState(() => soundController.isMuted())
 
   const clearSelection = useCallback(() => {
     setSelected(null)
@@ -110,7 +117,8 @@ export default function App() {
   const onClockTimeout = useCallback(() => {
     invalidateBotMove()
     clearPresentationState()
-  }, [clearPresentationState, invalidateBotMove])
+    soundController.play(SOUND_KINDS.gameOver)
+  }, [clearPresentationState, invalidateBotMove, soundController])
 
   const {
     clockState,
@@ -201,6 +209,14 @@ export default function App() {
       setActiveCapture(null)
       setActiveMove(quiet)
     }
+
+    soundController.play(
+      resolveMoveSound({
+        captured: Boolean(move.captured),
+        feedback: getPositionFeedback(chess),
+        isDraw: chess.isDraw(),
+      }),
+    )
 
     updateScreen()
   }
@@ -559,6 +575,14 @@ export default function App() {
           title={`Flip board (${shortcutHintLabel(SHORTCUT_ACTIONS.flip)})`}
         >
           Flip Board
+        </button>
+        <button
+          aria-pressed={!soundMuted}
+          aria-label={soundMuted ? 'Unmute sound effects' : 'Mute sound effects'}
+          onClick={() => setSoundMuted(soundController.toggleMuted())}
+          title={soundMuted ? 'Unmute sound' : 'Mute sound'}
+        >
+          {soundMuted ? '🔇 Sound Off' : '🔊 Sound On'}
         </button>
 
         {mode === 'bot' && (
