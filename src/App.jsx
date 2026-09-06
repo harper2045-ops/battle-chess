@@ -581,7 +581,7 @@ export default function App() {
         onMoveComplete={completeMove}
       />
 
-      <CapturedPieces captured={captured} />
+      <CapturedPieces captured={captured} orientation={orientation} />
 
       <section className="match-details">
         <strong>Selected:</strong> {selected ? selected.toUpperCase() : 'None'}

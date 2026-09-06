@@ -620,6 +620,47 @@ button {
   gap: 10px;
 }
 
+.captured-advantage {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 7px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 6%);
+  color: #c6c6d5;
+}
+
+.captured-advantage__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b8b8ca;
+}
+
+.captured-advantage strong {
+  color: white;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.captured-advantage--w {
+  border-color: rgb(215 166 81 / 55%);
+  background: rgb(104 83 18 / 28%);
+}
+
+.captured-advantage--b {
+  border-color: rgb(140 160 210 / 45%);
+  background: rgb(40 52 86 / 45%);
+}
+
+.captured-advantage--even {
+  border-color: rgb(255 255 255 / 12%);
+}
+
 .captured-army {
   min-height: 58px;
   padding: 8px 12px;

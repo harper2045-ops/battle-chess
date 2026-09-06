@@ -1,3 +1,9 @@
+import {
+  getMaterialAdvantage,
+  getOrientedCapturedColors,
+  sortCapturedByValue,
+} from '../game/capturedPieces.js'
+
 const pieceSymbols = {
   w: { p: '♙', n: '♘', b: '♗', r: '♖', q: '♕', k: '♔' },
   b: { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' },
@@ -40,6 +46,8 @@ export function BattleBanner({ event }) {
 }
 
 function CapturedArmy({ color, pieces }) {
+  const sorted = sortCapturedByValue(pieces)
+
   return (
     <div className="captured-army">
       <span className="captured-army__label">
@@ -48,13 +56,13 @@ function CapturedArmy({ color, pieces }) {
       <span
         className="captured-army__pieces"
         aria-label={
-          pieces.length
-            ? pieces.map((piece) => pieceNames[piece]).join(', ')
+          sorted.length
+            ? sorted.map((piece) => pieceNames[piece]).join(', ')
             : 'None'
         }
       >
-        {pieces.length
-          ? pieces.map((piece, index) => (
+        {sorted.length
+          ? sorted.map((piece, index) => (
               <span aria-hidden="true" key={`${piece}-${index}`}>
                 {pieceSymbols[color][piece]}
               </span>
@@ -65,11 +73,26 @@ function CapturedArmy({ color, pieces }) {
   )
 }
 
-export function CapturedPieces({ captured }) {
+export function CapturedPieces({ captured, orientation = 'w' }) {
+  const advantage = getMaterialAdvantage(captured)
+  const colors = getOrientedCapturedColors(orientation)
+  const advantageClass = advantage.leader
+    ? `captured-advantage captured-advantage--${advantage.leader}`
+    : 'captured-advantage captured-advantage--even'
+
   return (
     <section className="captured-pieces" aria-label="Captured pieces">
-      <CapturedArmy color="w" pieces={captured.w} />
-      <CapturedArmy color="b" pieces={captured.b} />
+      <p className={advantageClass} aria-live="polite">
+        <span className="captured-advantage__label">Material</span>
+        <strong>{advantage.label}</strong>
+      </p>
+      {colors.map((color) => (
+        <CapturedArmy
+          color={color}
+          key={color}
+          pieces={captured[color]}
+        />
+      ))}
     </section>
   )
 }
