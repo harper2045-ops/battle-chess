@@ -26,6 +26,24 @@ export function createCaptureEvent(move, id = 0) {
   }
 }
 
+
+export function createQuietMoveEvent(move, id = 0) {
+  if (!move || move.captured) return null
+
+  return {
+    id,
+    type: 'move',
+    piece: {
+      // Promote visually on arrival — walk as the piece that will sit on `to`.
+      type: move.promotion ?? move.piece,
+      color: move.color,
+    },
+    from: move.from,
+    to: move.to,
+    promotion: move.promotion ?? null,
+  }
+}
+
 export function getCapturedPieces(moves) {
   return moves.reduce(
     (captured, move) => {

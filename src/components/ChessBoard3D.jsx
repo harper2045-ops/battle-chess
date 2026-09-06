@@ -7,6 +7,11 @@ import {
   getCapturePose,
   squareToWorld,
 } from '../battle/captureAnimation.js'
+import {
+  getQuietMoveAction,
+  getQuietMovePose,
+  quietMoveDuration,
+} from '../battle/moveAnimation.js'
 import { FantasyPiece } from './FantasyPiece.jsx'
 
 const pieceNames = {
@@ -216,15 +221,52 @@ function CaptureActors({ event, onComplete, reducedMotion }) {
   )
 }
 
+
+function MoveActor({ event, onComplete, reducedMotion }) {
+  const actor = useRef()
+  const elapsed = useRef(0)
+  const done = useRef(false)
+  const [action, setAction] = useState(() =>
+    getQuietMoveAction(0, reducedMotion),
+  )
+
+  useFrame((_, delta) => {
+    if (done.current) return
+
+    elapsed.current += delta * 1000
+    const duration = quietMoveDuration(event.from, event.to, reducedMotion)
+    const progress = Math.min(1, elapsed.current / duration)
+    const pose = getQuietMovePose(event, progress)
+    const nextAction = getQuietMoveAction(progress, reducedMotion)
+
+    setAction((current) => (current === nextAction ? current : nextAction))
+
+    actor.current.position.set(...pose)
+
+    if (progress === 1) {
+      done.current = true
+      onComplete(event.id)
+    }
+  })
+
+  return (
+    <group ref={actor} position={squareToWorld(event.from)}>
+      <Piece piece={event.piece} action={action} />
+    </group>
+  )
+}
+
 function Scene({
   board,
   orientation,
   selected,
   legalMoves,
   activeCapture,
+  activeMove,
   disabled,
   onSquareClick,
   onCaptureComplete,
+  onMoveComplete,
   reducedMotion,
 }) {
   const legal = useMemo(() => new Set(legalMoves), [legalMoves])
@@ -249,6 +291,10 @@ function Scene({
           activeCapture &&
           square === activeCapture.to &&
           piece?.color === activeCapture.attacker.color
+        const hideQuietMover =
+          activeMove &&
+          square === activeMove.to &&
+          piece?.color === activeMove.piece.color
 
         return (
           <group
@@ -280,7 +326,7 @@ function Scene({
                 <meshBasicMaterial color="#263c25" transparent opacity={0.65} />
               </mesh>
             )}
-            {piece && !hideCommittedAttacker && (
+            {piece && !hideCommittedAttacker && !hideQuietMover && (
               <Piece piece={piece} selected={isSelected} />
             )}
           </group>
@@ -292,6 +338,15 @@ function Scene({
           key={activeCapture.id}
           event={activeCapture}
           onComplete={onCaptureComplete}
+          reducedMotion={reducedMotion}
+        />
+      )}
+
+      {activeMove && !activeCapture && (
+        <MoveActor
+          key={activeMove.id}
+          event={activeMove}
+          onComplete={onMoveComplete}
           reducedMotion={reducedMotion}
         />
       )}
@@ -313,12 +368,15 @@ export function ChessBoard3D({
   selected,
   legalMoves,
   activeCapture,
+  activeMove,
   disabled,
   feedback,
   onSquareClick,
   onCaptureComplete,
+  onMoveComplete,
 }) {
   const reducedMotion = useReducedMotion()
+  const animating = Boolean(activeCapture || activeMove)
 
   return (
     <div
@@ -328,7 +386,7 @@ export function ChessBoard3D({
         aria-label="Interactive 3D chess board"
         camera={{ fov: 42, near: 0.1, far: 100 }}
         dpr={1}
-        frameloop={activeCapture ? 'always' : 'demand'}
+        frameloop={animating ? 'always' : 'demand'}
       >
         <Scene
           board={board}
@@ -336,9 +394,11 @@ export function ChessBoard3D({
           selected={selected}
           legalMoves={legalMoves}
           activeCapture={activeCapture}
+          activeMove={activeMove}
           disabled={disabled}
           onSquareClick={onSquareClick}
           onCaptureComplete={onCaptureComplete}
+          onMoveComplete={onMoveComplete}
           reducedMotion={reducedMotion}
         />
       </Canvas>

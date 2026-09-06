@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Chess } from 'chess.js'
 import {
   createCaptureEvent,
+  createQuietMoveEvent,
   getCapturedPieces,
   getPositionFeedback,
 } from './battleEvents.js'
@@ -48,6 +49,38 @@ describe('battle presentation events', () => {
       from: 'g7',
       to: 'h8',
       defenderSquare: 'h8',
+      promotion: 'q',
+    })
+  })
+
+
+  it('creates a quiet move event for non-captures', () => {
+    const chess = new Chess()
+    const move = chess.move('e4')
+
+    expect(createQuietMoveEvent(move, 3)).toEqual({
+      id: 3,
+      type: 'move',
+      piece: { type: 'p', color: 'w' },
+      from: 'e2',
+      to: 'e4',
+      promotion: null,
+    })
+  })
+
+  it('does not create a quiet move event for captures', () => {
+    const chess = new Chess()
+    chess.move('e4')
+    chess.move('d5')
+    expect(createQuietMoveEvent(chess.move('exd5'))).toBeNull()
+  })
+
+  it('uses the promoted piece type for quiet promotions', () => {
+    const chess = new Chess('4k3/6P1/8/8/8/8/8/4K3 w - - 0 1')
+    expect(createQuietMoveEvent(chess.move('g8=Q'))).toMatchObject({
+      piece: { type: 'q', color: 'w' },
+      from: 'g7',
+      to: 'g8',
       promotion: 'q',
     })
   })
