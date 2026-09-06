@@ -8,6 +8,7 @@ import {
 import { Chess } from 'chess.js'
 import {
   createCaptureEvent,
+  createQuietMoveEvent,
   getCapturedPieces,
   getPositionFeedback,
 } from './battle/battleEvents.js'
@@ -62,6 +63,7 @@ export default function App() {
   const [thinking, setThinking] = useState(false)
   const [battleEvent, setBattleEvent] = useState(null)
   const [activeCapture, setActiveCapture] = useState(null)
+  const [activeMove, setActiveMove] = useState(null)
   const [copyStatus, setCopyStatus] = useState('')
   const [timeControl, setTimeControl] = useState('untimed')
 
@@ -126,10 +128,16 @@ export default function App() {
     )
     setClockState(nextClockState)
 
-    const event = createCaptureEvent(move, ++battleId.current)
-    if (event) {
-      setBattleEvent(event)
-      setActiveCapture(event)
+    const id = ++battleId.current
+    const capture = createCaptureEvent(move, id)
+    if (capture) {
+      setBattleEvent(capture)
+      setActiveCapture(capture)
+      setActiveMove(null)
+    } else {
+      const quiet = createQuietMoveEvent(move, id)
+      setActiveCapture(null)
+      setActiveMove(quiet)
     }
 
     updateScreen()
@@ -251,6 +259,7 @@ export default function App() {
     clearSelection()
     setBattleEvent(null)
     setActiveCapture(null)
+    setActiveMove(null)
     setCopyStatus('')
     setThinking(false)
     resetClock()
@@ -276,6 +285,7 @@ export default function App() {
     clearSelection()
     setBattleEvent(null)
     setActiveCapture(null)
+    setActiveMove(null)
     setCopyStatus('')
     setThinking(false)
     resetClock()
@@ -296,6 +306,7 @@ export default function App() {
     clearSelection()
     setBattleEvent(null)
     setActiveCapture(null)
+    setActiveMove(null)
     setCopyStatus('')
     setThinking(false)
     resetClock()
@@ -309,6 +320,7 @@ export default function App() {
     clearSelection()
     setBattleEvent(null)
     setActiveCapture(null)
+    setActiveMove(null)
     setCopyStatus('')
     setThinking(false)
     clearMatchResult()
@@ -348,6 +360,7 @@ export default function App() {
     clearSelection()
     setBattleEvent(null)
     setActiveCapture(null)
+    setActiveMove(null)
     setCopyStatus('')
     setThinking(false)
     resetClock(controlId)
@@ -389,6 +402,12 @@ export default function App() {
 
   const completeCapture = useCallback((eventId) => {
     setActiveCapture((current) =>
+      current?.id === eventId ? null : current,
+    )
+  }, [])
+
+  const completeMove = useCallback((eventId) => {
+    setActiveMove((current) =>
       current?.id === eventId ? null : current,
     )
   }, [])
@@ -500,10 +519,12 @@ export default function App() {
         selected={selected}
         legalMoves={legalMoves}
         activeCapture={activeCapture}
+        activeMove={activeMove}
         disabled={thinking || chess.isGameOver() || Boolean(matchResult)}
         feedback={matchFeedback}
         onSquareClick={handleClick}
         onCaptureComplete={completeCapture}
+        onMoveComplete={completeMove}
       />
 
       <CapturedPieces captured={captured} />

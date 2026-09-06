@@ -103,11 +103,10 @@ export function FantasyPiece({ piece, selected = false, action = 'idle' }) {
     mixer.stopAllAction()
     const clipAction = mixer.clipAction(clip)
     clipAction.reset()
-    clipAction.clampWhenFinished = action !== 'idle'
-    clipAction.setLoop(
-      action === 'idle' ? LoopRepeat : LoopOnce,
-      action === 'idle' ? Infinity : 1,
-    )
+    // Idle and walk loop; attack/hit/death play once and hold.
+    const looping = action === 'idle' || action === 'walk'
+    clipAction.clampWhenFinished = !looping
+    clipAction.setLoop(looping ? LoopRepeat : LoopOnce, looping ? Infinity : 1)
     // Desync idle so the army does not breathe in lockstep.
     if (action === 'idle') {
       clipAction.time = Math.random() * Math.min(0.45, clip.duration)
