@@ -15,6 +15,10 @@ import {
   quietMoveDuration,
 } from '../battle/moveAnimation.js'
 import { FantasyPiece } from './FantasyPiece.jsx'
+import {
+  isLastMoveSquare,
+  squareHighlightColor,
+} from '../game/lastMove.js'
 
 const pieceNames = {
   p: 'Pawn',
@@ -311,6 +315,7 @@ function Scene({
   orientation,
   selected,
   legalMoves,
+  lastMove,
   activeCapture,
   activeMove,
   disabled,
@@ -337,6 +342,8 @@ function Scene({
         const rank = Number(square[1]) - 1
         const isSelected = square === selected
         const isLegal = legal.has(square)
+        const isLastMove = isLastMoveSquare(lastMove, square)
+        const isDark = (file + rank) % 2 === 0
         const hideCommittedAttacker =
           activeCapture &&
           square === activeCapture.to &&
@@ -361,16 +368,15 @@ function Scene({
             <mesh position-y={-0.02}>
               <boxGeometry args={[0.99, 0.12, 0.99]} />
               <meshStandardMaterial
-                color={
-                  isSelected
-                    ? '#d5a229'
-                    : isLegal
-                      ? '#63895b'
-                      : (file + rank) % 2
-                        ? '#d8bd86'
-                        : '#755038'
-                }
+                color={squareHighlightColor({
+                  isSelected,
+                  isLegal,
+                  isLastMove,
+                  isDark,
+                })}
                 roughness={0.7}
+                emissive={isLastMove && !isSelected && !isLegal ? '#6a5418' : '#000000'}
+                emissiveIntensity={isLastMove && !isSelected && !isLegal ? 0.22 : 0}
               />
             </mesh>
             {isLegal && !piece && (
@@ -420,6 +426,7 @@ export function ChessBoard3D({
   orientation,
   selected,
   legalMoves,
+  lastMove,
   activeCapture,
   activeMove,
   disabled,
@@ -446,6 +453,7 @@ export function ChessBoard3D({
           orientation={orientation}
           selected={selected}
           legalMoves={legalMoves}
+          lastMove={lastMove}
           activeCapture={activeCapture}
           activeMove={activeMove}
           disabled={disabled}
@@ -463,7 +471,7 @@ export function ChessBoard3D({
             type="button"
             disabled={disabled}
             onClick={() => onSquareClick(square)}
-            aria-label={`${square.toUpperCase()}${piece ? ` ${piece.color === 'w' ? 'White' : 'Black'} ${pieceNames[piece.type]}` : ' empty'}`}
+            aria-label={`${square.toUpperCase()}${piece ? ` ${piece.color === 'w' ? 'White' : 'Black'} ${pieceNames[piece.type]}` : ' empty'}${isLastMoveSquare(lastMove, square) ? (square === lastMove.from ? ', last move from' : ', last move to') : ''}`}
           />
         ))}
       </div>

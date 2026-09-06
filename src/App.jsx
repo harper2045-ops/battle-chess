@@ -30,6 +30,7 @@ import {
   createHistoryController,
 } from './game/history.js'
 import { getOrientedBoard } from './game/board.js'
+import { getLastMove } from './game/lastMove.js'
 import { copyPgn, createPgnFilename, getGamePgn } from './game/pgn.js'
 import { isBotTurn } from './game/player.js'
 import { createClockController } from './game/clock.js'
@@ -121,7 +122,9 @@ export default function App() {
   } = useGameClock(clockController, { onTimeout: onClockTimeout })
 
   const board = getOrientedBoard(chess.board(), orientation)
-  const captured = getCapturedPieces(chess.history({ verbose: true }))
+  const verboseHistory = chess.history({ verbose: true })
+  const captured = getCapturedPieces(verboseHistory)
+  const lastMove = getLastMove(verboseHistory)
   const history = chess.history()
   const feedback = getPositionFeedback(chess)
   const matchFeedback = matchResult ? 'timeout' : feedback
@@ -638,6 +641,7 @@ export default function App() {
         orientation={orientation}
         selected={selected}
         legalMoves={legalMoves}
+        lastMove={lastMove}
         activeCapture={activeCapture}
         activeMove={activeMove}
         disabled={
