@@ -4,6 +4,7 @@ import { OrbitControls } from '@react-three/drei'
 import {
   captureDuration,
   getCaptureActions,
+  getCaptureAttackerPiece,
   getCapturePose,
   squareToWorld,
 } from '../battle/captureAnimation.js'
@@ -181,6 +182,9 @@ function CaptureActors({ event, onComplete, reducedMotion }) {
   const [actions, setActions] = useState(() =>
     getCaptureActions(0, reducedMotion),
   )
+  const [attackerPiece, setAttackerPiece] = useState(() =>
+    getCaptureAttackerPiece(event, 0),
+  )
 
   useFrame((_, delta) => {
     if (done.current) return
@@ -190,12 +194,18 @@ function CaptureActors({ event, onComplete, reducedMotion }) {
     const progress = Math.min(1, elapsed.current / duration)
     const pose = getCapturePose(event, progress)
     const nextActions = getCaptureActions(progress, reducedMotion)
+    const nextAttacker = getCaptureAttackerPiece(event, progress)
 
     setActions((current) =>
       current.attacker === nextActions.attacker &&
       current.defender === nextActions.defender
         ? current
         : nextActions,
+    )
+    setAttackerPiece((current) =>
+      current.type === nextAttacker.type && current.color === nextAttacker.color
+        ? current
+        : nextAttacker,
     )
 
     attacker.current.position.set(...pose.attacker)
@@ -212,7 +222,7 @@ function CaptureActors({ event, onComplete, reducedMotion }) {
   return (
     <>
       <group ref={attacker} position={squareToWorld(event.from)}>
-        <Piece piece={event.attacker} action={actions.attacker} />
+        <Piece piece={attackerPiece} action={actions.attacker} />
       </group>
       <group ref={defender} position={squareToWorld(event.defenderSquare)}>
         <Piece piece={event.defender} action={actions.defender} />

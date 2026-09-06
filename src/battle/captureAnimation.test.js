@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   getCaptureActions,
+  getCaptureAttackerPiece,
   getCapturePose,
   squareToWorld,
 } from './captureAnimation.js'
@@ -42,5 +43,26 @@ describe('3D capture presentation', () => {
       attacker: 'idle',
       defender: 'idle',
     })
+  })
+
+  it('reveals the promoted fantasy piece after the capture lunge lands', () => {
+    const event = {
+      attacker: { type: 'p', color: 'w' },
+      promotion: 'q',
+    }
+    expect(getCaptureAttackerPiece(event, 0.5)).toEqual({
+      type: 'p',
+      color: 'w',
+    })
+    expect(getCaptureAttackerPiece(event, 0.72)).toEqual({
+      type: 'q',
+      color: 'w',
+    })
+    expect(
+      getCaptureAttackerPiece(
+        { attacker: { type: 'n', color: 'b' }, promotion: null },
+        1,
+      ),
+    ).toEqual({ type: 'n', color: 'b' })
   })
 })
