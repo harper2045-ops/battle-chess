@@ -35,6 +35,7 @@ import { isBotTurn } from './game/player.js'
 import { createClockController } from './game/clock.js'
 import { useGameClock } from './hooks/useGameClock.js'
 import { CreditsPanel } from './components/CreditsPanel.jsx'
+import { BotThinking } from './components/BotThinking.jsx'
 import { PromotionPicker } from './components/PromotionPicker.jsx'
 import { getPromotionOptions } from './game/promotion.js'
 import { clearedPresentationState } from './game/presentation.js'
@@ -540,10 +541,13 @@ export default function App() {
 
       <h2
         className={`game-status game-status--${matchFeedback}`}
+        aria-busy={thinking}
         aria-live="polite"
       >
-        {thinking ? '🤖 Bot thinking...' : status()}
+        {status()}
       </h2>
+
+      <BotThinking active={thinking} difficulty={difficulty} />
 
       <BattleBanner event={battleEvent} />
 

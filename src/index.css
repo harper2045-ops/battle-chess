@@ -319,6 +319,55 @@ button {
   text-shadow: 0 0 22px rgb(255 90 55 / 60%);
 }
 
+.bot-thinking {
+  width: min(90vw, 680px);
+  margin: -4px 0 10px;
+  padding: 8px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid rgb(125 170 255 / 28%);
+  border-radius: 999px;
+  background: linear-gradient(
+    110deg,
+    rgb(28 36 68 / 88%),
+    rgb(42 52 92 / 88%)
+  );
+  box-shadow: inset 0 1px rgb(255 255 255 / 8%);
+  color: #c8d6ff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.bot-thinking__glyph {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.bot-thinking__dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.bot-thinking__dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9eb6ff;
+  opacity: 0.35;
+  animation: bot-thinking-dot 1.05s ease-in-out infinite;
+}
+
+.bot-thinking__dots span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.bot-thinking__dots span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
 .time-controls {
   width: min(90vw, 680px);
   margin: -6px 0 16px;
@@ -659,6 +708,19 @@ button {
   }
 }
 
+@keyframes bot-thinking-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
 @keyframes clock-low-pulse {
   50% {
     filter: brightness(1.18);
@@ -670,8 +732,13 @@ button {
   .battle-impact,
   .chess-board--check,
   .chess-board-3d--check,
-  .chess-clock--low.chess-clock--active {
+  .chess-clock--low.chess-clock--active,
+  .bot-thinking__dots span {
     animation: none;
+  }
+
+  .bot-thinking__dots span {
+    opacity: 0.85;
   }
 
   .battle-impact {
