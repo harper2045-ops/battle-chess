@@ -8,6 +8,30 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
 }
 
+/** Resting face: white toward -Z (up-board), black toward +Z. */
+export function restingYaw(color) {
+  return color === 'b' ? Math.PI : 0
+}
+
+/**
+ * World yaw so model forward (-Z at yaw 0) points toward the destination.
+ * Settles back to team facing near arrival.
+ */
+export function getQuietMoveYaw(event, progress, color) {
+  const settle = restingYaw(color)
+  const t = Math.max(0, Math.min(1, progress))
+  if (t >= 0.97) return settle
+
+  const from = squareToWorld(event.from)
+  const to = squareToWorld(event.to)
+  const dx = to[0] - from[0]
+  const dz = to[2] - from[2]
+  if (Math.hypot(dx, dz) < 1e-6) return settle
+
+  // Ivory models face -Z at rotation-y 0 (white's home facing).
+  return Math.atan2(dx, -dz)
+}
+
 /** Chebyshev steps for sliders; euclidean for knights so jumps aren't too slow. */
 export function quietMoveDistance(from, to) {
   const df = Math.abs(from.charCodeAt(0) - to.charCodeAt(0))

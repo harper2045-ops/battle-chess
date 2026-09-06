@@ -10,6 +10,7 @@ import {
 import {
   getQuietMoveAction,
   getQuietMovePose,
+  getQuietMoveYaw,
   quietMoveDuration,
 } from '../battle/moveAnimation.js'
 import { FantasyPiece } from './FantasyPiece.jsx'
@@ -152,10 +153,10 @@ function ProceduralPiece({ piece, selected = false }) {
   )
 }
 
-function Piece({ piece, selected = false, action = 'idle' }) {
+function Piece({ piece, selected = false, action = 'idle', yaw }) {
   return (
     <Suspense fallback={<ProceduralPiece piece={piece} selected={selected} />}>
-      <FantasyPiece piece={piece} selected={selected} action={action} />
+      <FantasyPiece piece={piece} selected={selected} action={action} yaw={yaw} />
     </Suspense>
   )
 }
@@ -222,37 +223,76 @@ function CaptureActors({ event, onComplete, reducedMotion }) {
 }
 
 
-function MoveActor({ event, onComplete, reducedMotion }) {
+function MoveActor({ move, onFinished, reducedMotion }) {
   const actor = useRef()
   const elapsed = useRef(0)
   const done = useRef(false)
   const [action, setAction] = useState(() =>
     getQuietMoveAction(0, reducedMotion),
   )
+  const [yaw, setYaw] = useState(() =>
+    getQuietMoveYaw(move, 0, move.piece.color),
+  )
 
   useFrame((_, delta) => {
     if (done.current) return
 
     elapsed.current += delta * 1000
-    const duration = quietMoveDuration(event.from, event.to, reducedMotion)
+    const duration = quietMoveDuration(move.from, move.to, reducedMotion)
     const progress = Math.min(1, elapsed.current / duration)
-    const pose = getQuietMovePose(event, progress)
+    const pose = getQuietMovePose(move, progress)
     const nextAction = getQuietMoveAction(progress, reducedMotion)
+    const nextYaw = getQuietMoveYaw(move, progress, move.piece.color)
 
     setAction((current) => (current === nextAction ? current : nextAction))
+    setYaw((current) =>
+      Math.abs(current - nextYaw) < 1e-4 ? current : nextYaw,
+    )
 
     actor.current.position.set(...pose)
 
     if (progress === 1) {
       done.current = true
-      onComplete(event.id)
+      onFinished()
     }
   })
 
   return (
-    <group ref={actor} position={squareToWorld(event.from)}>
-      <Piece piece={event.piece} action={action} />
+    <group ref={actor} position={squareToWorld(move.from)}>
+      <Piece piece={move.piece} action={action} yaw={yaw} />
     </group>
+  )
+}
+
+/** Primary mover plus castling rook companion; completes when all finish. */
+function QuietMoveActors({ event, onComplete, reducedMotion }) {
+  const pending = useRef(1 + (event.companions?.length ?? 0))
+  const finished = useRef(false)
+
+  const onFinished = () => {
+    pending.current -= 1
+    if (pending.current <= 0 && !finished.current) {
+      finished.current = true
+      onComplete(event.id)
+    }
+  }
+
+  const movers = [
+    { piece: event.piece, from: event.from, to: event.to },
+    ...(event.companions ?? []),
+  ]
+
+  return (
+    <>
+      {movers.map((move) => (
+        <MoveActor
+          key={`${move.from}-${move.to}`}
+          move={move}
+          onFinished={onFinished}
+          reducedMotion={reducedMotion}
+        />
+      ))}
+    </>
   )
 }
 
@@ -293,8 +333,11 @@ function Scene({
           piece?.color === activeCapture.attacker.color
         const hideQuietMover =
           activeMove &&
-          square === activeMove.to &&
-          piece?.color === activeMove.piece.color
+          piece?.color === activeMove.piece.color &&
+          (square === activeMove.to ||
+            (activeMove.companions ?? []).some(
+              (companion) => square === companion.to,
+            ))
 
         return (
           <group
@@ -343,7 +386,7 @@ function Scene({
       )}
 
       {activeMove && !activeCapture && (
-        <MoveActor
+        <QuietMoveActors
           key={activeMove.id}
           event={activeMove}
           onComplete={onMoveComplete}
