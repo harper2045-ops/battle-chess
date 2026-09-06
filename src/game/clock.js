@@ -151,10 +151,35 @@ export function createClockController(
   }
 }
 
+/** Remaining under this threshold shows tenths (0:09.4). */
+export const CLOCK_TENTHS_MS = 10_000
+
+/** Active clock under this threshold gets a low-time visual warning. */
+export const CLOCK_LOW_MS = 30_000
+
+export function isLowTime(remainingMs) {
+  return (
+    typeof remainingMs === 'number' &&
+    remainingMs > 0 &&
+    remainingMs < CLOCK_LOW_MS
+  )
+}
+
 export function formatClock(remainingMs) {
   if (remainingMs === null) return '--:--'
 
-  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1_000))
+  const ms = Math.max(0, remainingMs)
+
+  // Under 10s: show tenths so flagging is readable (lichess-style).
+  if (ms < CLOCK_TENTHS_MS) {
+    const tenthsTotal = Math.floor(ms / 100)
+    const seconds = Math.floor(tenthsTotal / 10)
+    const tenths = tenthsTotal % 10
+    return `0:${String(seconds).padStart(2, '0')}.${tenths}`
+  }
+
+  // Whole seconds use ceil so displayed time never under-reads remaining.
+  const totalSeconds = Math.ceil(ms / 1_000)
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
   return `${minutes}:${String(seconds).padStart(2, '0')}`
