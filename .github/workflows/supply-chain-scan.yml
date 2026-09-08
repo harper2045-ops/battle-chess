@@ -31,6 +31,7 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@v0.36.0
+        id: trivy-scan
         with:
           scan-type: 'fs'
           scanners: 'vuln'
@@ -43,7 +44,7 @@ jobs:
 
       - name: Upload SARIF results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: success() && steps.trivy-scan.outcome == 'success'
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -133,6 +134,7 @@ jobs:
             body += `**Repository:** ${context.repo.owner}/${context.repo.repo}\n`;
             body += `**Scan Date:** ${new Date().toISOString().split('T')[0]}\n`;
             body += `**Total Findings:** ${vulns.length}\n\n`;
+            body += `### Vulnerabilities\n`;
             body += `| Package | Vulnerability | Severity | Fixed Version |\n`;
             body += `|---------|---------------|----------|---------------|\n`;
             vulns.forEach(v => {
