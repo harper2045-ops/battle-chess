@@ -14,7 +14,7 @@ import {
   getQuietMoveYaw,
   quietMoveDuration,
 } from '../battle/moveAnimation.js'
-import { FantasyPiece } from './FantasyPiece.jsx'
+import { GeometricPiece } from './GeometricPiece.jsx'
 import {
   isLastMoveSquare,
   squareHighlightColor,
@@ -181,7 +181,7 @@ function ProceduralPiece({ piece, selected = false }) {
 function Piece({ piece, selected = false, action = 'idle', yaw }) {
   return (
     <Suspense fallback={<ProceduralPiece piece={piece} selected={selected} />}>
-      <FantasyPiece piece={piece} selected={selected} action={action} yaw={yaw} />
+      <GeometricPiece piece={piece} selected={selected} action={action} yaw={yaw} />
     </Suspense>
   )
 }
