@@ -1,17 +1,19 @@
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 
-// Material presets for each piece color
+// High-quality PBR material presets
 const MATERIALS = {
   w: {
-    primary: { color: '#f5f0e8', metalness: 0.15, roughness: 0.4 },
-    accent: { color: '#d4af37', metalness: 0.8, roughness: 0.2 }, // Gold accents
-    dark: { color: '#8b7355', metalness: 0.3, roughness: 0.6 },
+    // White pieces: warm ivory with gold accents
+    ivory: { color: '#f8f4e8', metalness: 0.05, roughness: 0.35, envMapIntensity: 0.8 },
+    gold: { color: '#d4af37', metalness: 0.9, roughness: 0.15, envMapIntensity: 1.2 },
+    shadow: { color: '#c8bfa8', metalness: 0.1, roughness: 0.5 },
   },
   b: {
-    primary: { color: '#2a2f35', metalness: 0.2, roughness: 0.45 },
-    accent: { color: '#c0c0c0', metalness: 0.85, roughness: 0.15 }, // Silver accents
-    dark: { color: '#1a1f25', metalness: 0.3, roughness: 0.6 },
+    // Black pieces: deep ebony with silver accents
+    ebony: { color: '#1a1f25', metalness: 0.15, roughness: 0.3, envMapIntensity: 0.9 },
+    silver: { color: '#e8e8e8', metalness: 0.95, roughness: 0.1, envMapIntensity: 1.3 },
+    shadow: { color: '#0f1215', metalness: 0.2, roughness: 0.5 },
   },
 }
 
@@ -27,156 +29,188 @@ const PIECE_HEIGHTS = {
 
 function PieceMesh({ type, color }) {
   const mat = MATERIALS[color]
+  const body = mat[color === 'w' ? 'ivory' : 'ebony']
+  const accent = mat[color === 'w' ? 'gold' : 'silver']
+  const shadow = mat.shadow
 
-  // Shared base for all pieces
+  // Shared detailed base with beveled edges
   const Base = () => (
     <group>
-      {/* Bottom disc */}
-      <mesh position-y={0.025}>
-        <cylinderGeometry args={[0.19, 0.2, 0.05, 32]} />
-        <meshStandardMaterial {...mat.dark} />
+      {/* Bottom disc with bevel */}
+      <mesh position-y={0.02}>
+        <cylinderGeometry args={[0.19, 0.2, 0.04, 48]} />
+        <meshStandardMaterial {...shadow} />
       </mesh>
-      {/* Gold/silver trim ring */}
-      <mesh position-y={0.055}>
-        <cylinderGeometry args={[0.17, 0.17, 0.01, 32]} />
-        <meshStandardMaterial {...mat.accent} />
+      {/* Accent ring */}
+      <mesh position-y={0.045}>
+        <cylinderGeometry args={[0.175, 0.175, 0.012, 48]} />
+        <meshStandardMaterial {...accent} />
+      </mesh>
+      {/* Upper base */}
+      <mesh position-y={0.06}>
+        <cylinderGeometry args={[0.16, 0.17, 0.02, 48]} />
+        <meshStandardMaterial {...body} />
       </mesh>
     </group>
   )
 
   switch (type) {
     case 'p': {
-      // Pawn: Classic chess pawn shape
+      // Pawn: Classic Staunton design
       return (
         <group>
           <Base />
           {/* Tapered body */}
-          <mesh position-y={0.18}>
-            <cylinderGeometry args={[0.06, 0.1, 0.25, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.16}>
+            <cylinderGeometry args={[0.055, 0.09, 0.2, 32]} />
+            <meshStandardMaterial {...body} />
           </mesh>
           {/* Collar */}
-          <mesh position-y={0.32}>
-            <cylinderGeometry args={[0.08, 0.06, 0.02, 16]} />
-            <meshStandardMaterial {...mat.accent} />
+          <mesh position-y={0.27}>
+            <cylinderGeometry args={[0.07, 0.055, 0.015, 32]} />
+            <meshStandardMaterial {...accent} />
+          </mesh>
+          {/* Shoulder */}
+          <mesh position-y={0.31}>
+            <sphereGeometry args={[0.065, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial {...body} />
           </mesh>
           {/* Head */}
-          <mesh position-y={0.4}>
-            <sphereGeometry args={[0.085, 24, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.38}>
+            <sphereGeometry args={[0.075, 32, 24]} />
+            <meshStandardMaterial {...body} />
           </mesh>
         </group>
       )
     }
 
     case 'n': {
-      // Knight: Horse head profile
+      // Knight: Detailed horse head
       return (
         <group>
           <Base />
           {/* Body */}
-          <mesh position-y={0.15}>
-            <cylinderGeometry args={[0.07, 0.1, 0.2, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.12}>
+            <cylinderGeometry args={[0.065, 0.095, 0.16, 32]} />
+            <meshStandardMaterial {...body} />
           </mesh>
-          {/* Neck */}
-          <mesh position={[0, 0.3, 0.02]} rotation-x={-0.4}>
-            <cylinderGeometry args={[0.05, 0.07, 0.18, 12]} />
-            <meshStandardMaterial {...mat.primary} />
+          {/* Neck (angled) */}
+          <mesh position={[0, 0.26, 0.02]} rotation-x={-0.45}>
+            <cylinderGeometry args={[0.045, 0.065, 0.16, 24]} />
+            <meshStandardMaterial {...body} />
           </mesh>
           {/* Head */}
-          <mesh position={[0, 0.4, 0.06]} rotation-x={-0.2}>
-            <boxGeometry args={[0.08, 0.06, 0.14]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position={[0, 0.36, 0.06]} rotation-x={-0.15}>
+            <boxGeometry args={[0.07, 0.055, 0.12]} />
+            <meshStandardMaterial {...body} />
           </mesh>
           {/* Snout */}
-          <mesh position={[0, 0.38, 0.14]}>
-            <boxGeometry args={[0.06, 0.04, 0.06]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position={[0, 0.34, 0.14]} rotation-x={0.1}>
+            <boxGeometry args={[0.055, 0.04, 0.05]} />
+            <meshStandardMaterial {...body} />
+          </mesh>
+          {/* Nostril */}
+          <mesh position={[0.02, 0.33, 0.165]}>
+            <sphereGeometry args={[0.008, 8, 6]} />
+            <meshStandardMaterial {...shadow} />
+          </mesh>
+          <mesh position={[-0.02, 0.33, 0.165]}>
+            <sphereGeometry args={[0.008, 8, 6]} />
+            <meshStandardMaterial {...shadow} />
+          </mesh>
+          {/* Eye */}
+          <mesh position={[0.035, 0.37, 0.1]}>
+            <sphereGeometry args={[0.008, 8, 6]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
           {/* Ear */}
-          <mesh position={[0.02, 0.44, 0.04]} rotation-z={0.3}>
-            <coneGeometry args={[0.015, 0.04, 6]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position={[0.015, 0.4, 0.05]} rotation-z={0.25} rotation-x={-0.2}>
+            <coneGeometry args={[0.012, 0.035, 8]} />
+            <meshStandardMaterial {...body} />
           </mesh>
-          {/* Mane accent */}
-          <mesh position={[0, 0.38, -0.02]} rotation-x={-0.3}>
-            <boxGeometry args={[0.03, 0.1, 0.02]} />
-            <meshStandardMaterial {...mat.accent} />
+          {/* Mane (accent) */}
+          <mesh position={[0, 0.34, -0.02]} rotation-x={-0.3}>
+            <boxGeometry args={[0.025, 0.09, 0.015]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
         </group>
       )
     }
 
     case 'b': {
-      // Bishop: Tall with mitre (slit top)
+      // Bishop: Tall mitre with slit
       return (
         <group>
           <Base />
           {/* Body */}
-          <mesh position-y={0.2}>
-            <cylinderGeometry args={[0.06, 0.1, 0.3, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.18}>
+            <cylinderGeometry args={[0.055, 0.09, 0.26, 32]} />
+            <meshStandardMaterial {...body} />
           </mesh>
           {/* Collar */}
-          <mesh position-y={0.36}>
-            <cylinderGeometry args={[0.07, 0.06, 0.015, 16]} />
-            <meshStandardMaterial {...mat.accent} />
+          <mesh position-y={0.32}>
+            <cylinderGeometry args={[0.065, 0.055, 0.012, 32]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
           {/* Mitre base */}
-          <mesh position-y={0.42}>
-            <cylinderGeometry args={[0.05, 0.07, 0.1, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.38}>
+            <cylinderGeometry args={[0.045, 0.06, 0.08, 32]} />
+            <meshStandardMaterial {...body} />
           </mesh>
           {/* Mitre top (pointed) */}
-          <mesh position-y={0.52}>
-            <coneGeometry args={[0.05, 0.12, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.48}>
+            <coneGeometry args={[0.045, 0.14, 32]} />
+            <meshStandardMaterial {...body} />
           </mesh>
-          {/* Slit */}
-          <mesh position={[0, 0.52, 0]}>
-            <boxGeometry args={[0.01, 0.08, 0.06]} />
-            <meshStandardMaterial {...mat.accent} />
+          {/* Slit (accent) */}
+          <mesh position={[0, 0.48, 0]}>
+            <boxGeometry args={[0.008, 0.1, 0.05]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
           {/* Cross on top */}
+          <mesh position-y={0.56}>
+            <boxGeometry args={[0.012, 0.035, 0.012]} />
+            <meshStandardMaterial {...accent} />
+          </mesh>
           <mesh position-y={0.58}>
-            <boxGeometry args={[0.015, 0.04, 0.015]} />
-            <meshStandardMaterial {...mat.accent} />
+            <boxGeometry args={[0.035, 0.012, 0.012]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
         </group>
       )
     }
 
     case 'r': {
-      // Rook: Castle tower with crenellations
+      // Rook: Castle tower with detailed crenellations
       return (
         <group>
           <Base />
           {/* Tower body */}
-          <mesh position-y={0.2}>
-            <cylinderGeometry args={[0.08, 0.1, 0.3, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.18}>
+            <cylinderGeometry args={[0.075, 0.095, 0.28, 32]} />
+            <meshStandardMaterial {...body} />
           </mesh>
-          {/* Band */}
-          <mesh position-y={0.36}>
-            <cylinderGeometry args={[0.085, 0.085, 0.015, 16]} />
-            <meshStandardMaterial {...mat.accent} />
+          {/* Decorative band */}
+          <mesh position-y={0.34}>
+            <cylinderGeometry args={[0.08, 0.08, 0.012, 32]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
           {/* Top platform */}
-          <mesh position-y={0.4}>
-            <cylinderGeometry args={[0.09, 0.08, 0.03, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.38}>
+            <cylinderGeometry args={[0.085, 0.075, 0.025, 32]} />
+            <meshStandardMaterial {...body} />
           </mesh>
-          {/* Crenellations (4 battlements) */}
-          {[0, 1, 2, 3].map((i) => {
-            const angle = (i * Math.PI) / 2
+          {/* Crenellations (8 battlements) */}
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+            const angle = (i * Math.PI) / 4
             return (
               <mesh
                 key={i}
-                position={[Math.cos(angle) * 0.07, 0.44, Math.sin(angle) * 0.07]}
+                position={[Math.cos(angle) * 0.065, 0.42, Math.sin(angle) * 0.065]}
+                rotation-y={-angle}
               >
-                <boxGeometry args={[0.04, 0.06, 0.04]} />
-                <meshStandardMaterial {...mat.primary} />
+                <boxGeometry args={[0.035, 0.05, 0.035]} />
+                <meshStandardMaterial {...body} />
               </mesh>
             )
           })}
@@ -185,86 +219,86 @@ function PieceMesh({ type, color }) {
     }
 
     case 'q': {
-      // Queen: Tall with crown
+      // Queen: Elegant crown with jewels
       return (
         <group>
           <Base />
           {/* Body */}
-          <mesh position-y={0.22}>
-            <cylinderGeometry args={[0.06, 0.1, 0.35, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.2}>
+            <cylinderGeometry args={[0.055, 0.09, 0.32, 32]} />
+            <meshStandardMaterial {...body} />
           </mesh>
           {/* Collar */}
-          <mesh position-y={0.4}>
-            <cylinderGeometry args={[0.07, 0.06, 0.015, 16]} />
-            <meshStandardMaterial {...mat.accent} />
+          <mesh position-y={0.37}>
+            <cylinderGeometry args={[0.065, 0.055, 0.012, 32]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
           {/* Crown base */}
-          <mesh position-y={0.45}>
-            <cylinderGeometry args={[0.07, 0.06, 0.04, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.42}>
+            <cylinderGeometry args={[0.065, 0.055, 0.04, 32]} />
+            <meshStandardMaterial {...body} />
           </mesh>
           {/* Crown rim */}
-          <mesh position-y={0.48}>
-            <cylinderGeometry args={[0.075, 0.07, 0.015, 16]} />
-            <meshStandardMaterial {...mat.accent} />
+          <mesh position-y={0.46}>
+            <cylinderGeometry args={[0.07, 0.065, 0.012, 32]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
-          {/* Crown spikes (5 points) */}
-          {[0, 1, 2, 3, 4].map((i) => {
-            const angle = (i * Math.PI * 2) / 5
+          {/* Crown spikes (8 points) */}
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+            const angle = (i * Math.PI * 2) / 8
             return (
               <mesh
                 key={i}
-                position={[Math.cos(angle) * 0.06, 0.53, Math.sin(angle) * 0.06]}
+                position={[Math.cos(angle) * 0.055, 0.51, Math.sin(angle) * 0.055]}
               >
-                <coneGeometry args={[0.015, 0.08, 8]} />
-                <meshStandardMaterial {...mat.accent} />
+                <coneGeometry args={[0.012, 0.07, 12]} />
+                <meshStandardMaterial {...accent} />
               </mesh>
             )
           })}
           {/* Center jewel */}
-          <mesh position-y={0.52}>
-            <sphereGeometry args={[0.025, 12, 8]} />
-            <meshStandardMaterial {...mat.accent} />
+          <mesh position-y={0.5}>
+            <sphereGeometry args={[0.022, 16, 12]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
         </group>
       )
     }
 
     case 'k': {
-      // King: Tallest with cross-topped crown
+      // King: Majestic cross-topped crown
       return (
         <group>
           <Base />
           {/* Body */}
-          <mesh position-y={0.24}>
-            <cylinderGeometry args={[0.07, 0.11, 0.38, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.22}>
+            <cylinderGeometry args={[0.065, 0.1, 0.35, 32]} />
+            <meshStandardMaterial {...body} />
           </mesh>
           {/* Collar */}
-          <mesh position-y={0.44}>
-            <cylinderGeometry args={[0.08, 0.07, 0.015, 16]} />
-            <meshStandardMaterial {...mat.accent} />
+          <mesh position-y={0.4}>
+            <cylinderGeometry args={[0.075, 0.065, 0.012, 32]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
           {/* Crown base */}
-          <mesh position-y={0.5}>
-            <cylinderGeometry args={[0.08, 0.07, 0.05, 16]} />
-            <meshStandardMaterial {...mat.primary} />
+          <mesh position-y={0.46}>
+            <cylinderGeometry args={[0.075, 0.065, 0.045, 32]} />
+            <meshStandardMaterial {...body} />
           </mesh>
           {/* Crown rim */}
-          <mesh position-y={0.54}>
-            <cylinderGeometry args={[0.085, 0.08, 0.015, 16]} />
-            <meshStandardMaterial {...mat.accent} />
+          <mesh position-y={0.51}>
+            <cylinderGeometry args={[0.08, 0.075, 0.012, 32]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
           {/* Cross vertical */}
-          <mesh position-y={0.62}>
-            <boxGeometry args={[0.02, 0.14, 0.02]} />
-            <meshStandardMaterial {...mat.accent} />
+          <mesh position-y={0.6}>
+            <boxGeometry args={[0.018, 0.15, 0.018]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
           {/* Cross horizontal */}
-          <mesh position-y={0.66}>
-            <boxGeometry args={[0.06, 0.02, 0.02]} />
-            <meshStandardMaterial {...mat.accent} />
+          <mesh position-y={0.64}>
+            <boxGeometry args={[0.055, 0.018, 0.018]} />
+            <meshStandardMaterial {...accent} />
           </mesh>
         </group>
       )
