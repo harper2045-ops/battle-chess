@@ -202,11 +202,12 @@ def join_parts(parts, name, target_height=None):
     obj = bpy.context.object
     obj.name = name
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-    lowest = min(vertex.co.z for vertex in obj.data.vertices)
-    highest = max(vertex.co.z for vertex in obj.data.vertices)
-    factor = target_height / (highest - lowest) if target_height else 1.0
-    for vertex in obj.data.vertices:
-        vertex.co.z = (vertex.co.z - lowest) * factor
+    if target_height is not None:
+        lowest = min(vertex.co.z for vertex in obj.data.vertices)
+        highest = max(vertex.co.z for vertex in obj.data.vertices)
+        factor = target_height / (highest - lowest)
+        for vertex in obj.data.vertices:
+            vertex.co.z = (vertex.co.z - lowest) * factor
     obj.data.update()
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")

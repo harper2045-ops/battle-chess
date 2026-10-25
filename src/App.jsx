@@ -32,7 +32,7 @@ import {
 import { getOrientedBoard } from './game/board.js'
 import { getLastMove } from './game/lastMove.js'
 import { copyPgn, createPgnFilename, getGamePgn } from './game/pgn.js'
-import { isBotTurn } from './game/player.js'
+import { canScheduleBot } from './game/player.js'
 import { createClockController } from './game/clock.js'
 import { useGameClock } from './hooks/useGameClock.js'
 import { CreditsPanel } from './components/CreditsPanel.jsx'
@@ -41,7 +41,11 @@ import { MatchAlertBanner } from './components/MatchAlertBanner.jsx'
 import { formatMatchStatus, getMatchAlert } from './game/matchAlert.js'
 import { PromotionPicker } from './components/PromotionPicker.jsx'
 import { getPromotionOptions } from './game/promotion.js'
-import { clearedPresentationState } from './game/presentation.js'
+import {
+  clearedPresentationState,
+  resetClockForScreen,
+  resumeClockForScreen,
+} from './game/presentation.js'
 import {
   resolveKeyboardShortcut,
   shortcutHintLabel,
@@ -74,6 +78,8 @@ export default function App() {
   const [, refresh] = useState(0)
   const [difficulty, setDifficulty] = useState('medium')
   const [screen, setScreen] = useState('menu')
+  const screenRef = useRef(screen)
+  screenRef.current = screen
   const [selected, setSelected] = useState(null)
   const [legalMoves, setLegalMoves] = useState([])
   const [mode, setMode] = useState('human')
@@ -125,7 +131,6 @@ export default function App() {
     clockState,
     matchResult,
     refreshClock,
-    resetClock: resetGameClock,
     clearMatchResult,
     setClockState,
   } = useGameClock(clockController, { onTimeout: onClockTimeout })
@@ -185,7 +190,7 @@ export default function App() {
   }
 
   const resetClock = (controlId = timeControl) => {
-    resetGameClock(controlId)
+    setClockState(resetClockForScreen(clockController, controlId, screen))
   }
 
   const recordMove = (move) => {
@@ -236,7 +241,8 @@ export default function App() {
   const makeBotMove = async (requestVersion) => {
     if (
       !botRequestGuard.isCurrent(requestVersion) ||
-      !isBotTurn(
+      !canScheduleBot(
+        screenRef.current,
         modeRef.current,
         playerColorRef.current,
         chess.turn(),
@@ -305,7 +311,7 @@ export default function App() {
       recordMove(move)
 
       if (
-        isBotTurn(mode, playerColor, chess.turn()) &&
+        canScheduleBot(screenRef.current, mode, playerColor, chess.turn()) &&
         !chess.isGameOver()
       ) {
         scheduleBotMove()
@@ -332,7 +338,7 @@ export default function App() {
     const piece = chess.get(square)
 
     if (!selected) {
-      if (isBotTurn(mode, playerColor, chess.turn())) return
+      if (canScheduleBot(screenRef.current, mode, playerColor, chess.turn())) return
       selectPiece(square)
       return
     }
@@ -381,7 +387,8 @@ export default function App() {
     updateScreen()
 
     if (
-      isBotTurn(
+      canScheduleBot(
+        screen,
         modeRef.current,
         playerColorRef.current,
         chess.turn(),
@@ -401,7 +408,7 @@ export default function App() {
     resetClock()
     updateScreen()
 
-    if (isBotTurn(newMode, playerColorRef.current, chess.turn())) {
+    if (canScheduleBot(screenRef.current, newMode, playerColorRef.current, chess.turn())) {
       scheduleBotMove()
     }
   }
@@ -417,7 +424,7 @@ export default function App() {
     resetClock()
     updateScreen()
 
-    if (isBotTurn(modeRef.current, color, chess.turn())) scheduleBotMove()
+    if (canScheduleBot(screenRef.current, modeRef.current, color, chess.turn())) scheduleBotMove()
   }
 
   const prepareHistoryChange = () => {
@@ -445,7 +452,7 @@ export default function App() {
 
     if (
       redoneMoves.length === 1 &&
-      isBotTurn(mode, playerColor, chess.turn()) &&
+      canScheduleBot(screenRef.current, mode, playerColor, chess.turn()) &&
       !chess.isGameOver()
     ) {
       scheduleBotMove()
@@ -471,7 +478,8 @@ export default function App() {
     updateScreen()
 
     if (
-      isBotTurn(
+      canScheduleBot(
+        screen,
         modeRef.current,
         playerColorRef.current,
         chess.turn(),
@@ -537,6 +545,17 @@ export default function App() {
       turn: chess.turn(),
       isDraw: chess.isDraw(),
     })
+
+  const startMatch = () => {
+    setScreen('game')
+    setClockState(resumeClockForScreen(clockController))
+    if (
+      canScheduleBot('game', modeRef.current, playerColorRef.current, chess.turn()) &&
+      !chess.isGameOver()
+    ) {
+      scheduleBotMove()
+    }
+  }
 
   if (screen === 'menu') {
     return (
@@ -624,7 +643,7 @@ export default function App() {
 
         <CreditsPanel />
 
-        <button className="start-match" onClick={() => setScreen('game')}>
+        <button className="start-match" onClick={startMatch}>
           {history.length ? 'Resume Match' : 'Start Match'}
         </button>
       </main>

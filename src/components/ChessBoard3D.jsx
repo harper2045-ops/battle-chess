@@ -26,7 +26,7 @@ import {
   getOrbitTouches,
   getSquareHitHeight,
 } from '../game/boardInput.js'
-import { getBoardCameraPosition } from '../game/boardCamera.js'
+import { getBoardCameraMaxDistance, getBoardCameraPosition } from '../game/boardCamera.js'
 
 const pieceNames = {
   p: 'Pawn',
@@ -375,6 +375,8 @@ function Scene({
     [coarsePointer],
   )
   const hitHeight = getSquareHitHeight(coarsePointer)
+  const { size } = useThree()
+  const maxDistance = getBoardCameraMaxDistance(orientation, size.width / size.height)
 
   return (
     <>
@@ -474,7 +476,7 @@ function Scene({
       <OrbitControls
         enablePan={false}
         minDistance={7}
-        maxDistance={13}
+        maxDistance={maxDistance}
         minPolarAngle={0.55}
         maxPolarAngle={1.25}
         touches={orbitTouches}

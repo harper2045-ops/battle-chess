@@ -15,3 +15,13 @@ export function clearedPresentationState() {
     thinking: false,
   }
 }
+
+export function resetClockForScreen(clock, controlId, screen) {
+  clock.reset(controlId)
+  return screen === 'menu' ? clock.pause() : clock.getState()
+}
+
+export function resumeClockForScreen(clock) {
+  const state = clock.getState()
+  return state.running ? state : clock.resume()
+}

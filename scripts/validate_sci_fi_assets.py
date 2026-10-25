@@ -62,8 +62,15 @@ def validate_board_and_scene(root):
         assert objects, f"{path}: no meshes"
         for obj in objects:
             validate_mesh(obj)
+        if path == board_path:
+            heights = [(obj.matrix_world @ vertex.co).z for obj in objects for vertex in obj.data.vertices]
+            assert close(min(heights), -0.41), f"board.glb: bottom moved to {min(heights)}"
+            assert close(max(heights), 0.04), f"board.glb: tile surface is {max(heights)}, expected 0.04"
     pieces = [obj for obj in objects if obj.get("chess_piece")]
     assert len(pieces) == 32, f"full-set.glb: expected 32 pieces, got {len(pieces)}"
+    for obj in pieces:
+        base = min((obj.matrix_world @ vertex.co).z for vertex in obj.data.vertices)
+        assert close(base, 0.04), f"{obj.name}: base is {base}, expected tile surface 0.04"
     squares = {obj.get("square") for obj in pieces}
     assert len(squares) == 32, "full-set.glb: piece squares are not unique"
     assert all(square in squares for square in ("a1", "h1", "a8", "h8"))

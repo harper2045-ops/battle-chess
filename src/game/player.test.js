@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isBotTurn } from './player.js'
+import { canScheduleBot, isBotTurn } from './player.js'
 
 describe('bot color assignment', () => {
   it('lets the bot open as White when the player chooses Black', () => {
@@ -14,5 +14,11 @@ describe('bot color assignment', () => {
 
   it('never assigns a bot turn in Human vs Human mode', () => {
     expect(isBotTurn('human', 'w', 'b')).toBe(false)
+  })
+
+  it('does not schedule the bot before the play screen starts', () => {
+    expect(canScheduleBot('menu', 'bot', 'b', 'w')).toBe(false)
+    expect(canScheduleBot('game', 'bot', 'b', 'w')).toBe(true)
+    expect(canScheduleBot('game', 'human', 'b', 'w')).toBe(false)
   })
 })
