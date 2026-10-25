@@ -73,6 +73,7 @@ export default function App() {
   const battleId = useRef(0)
   const [, refresh] = useState(0)
   const [difficulty, setDifficulty] = useState('medium')
+  const [screen, setScreen] = useState('menu')
   const [selected, setSelected] = useState(null)
   const [legalMoves, setLegalMoves] = useState([])
   const [mode, setMode] = useState('human')
@@ -537,10 +538,101 @@ export default function App() {
       isDraw: chess.isDraw(),
     })
 
+  if (screen === 'menu') {
+    return (
+      <main className="game-shell menu-screen">
+        <h1>⚔️ BATTLE CHESS</h1>
+        <p>Real chess underneath. A cinematic war game on top.</p>
+
+        <div className="game-controls">
+          <button onClick={() => changeMode('human')}>Human vs Human</button>
+          <button onClick={() => changeMode('bot')}>Human vs Bot</button>
+          <button onClick={resetGame}>Reset Match</button>
+          <button
+            aria-keyshortcuts="Control+Z Meta+Z"
+            disabled={!historyController.canUndo(mode, playerColor)}
+            onClick={undoMove}
+            title={`Undo (${shortcutHintLabel(SHORTCUT_ACTIONS.undo)})`}
+          >
+            Undo
+          </button>
+          <button
+            aria-keyshortcuts="Control+Y Meta+Y Control+Shift+Z Meta+Shift+Z"
+            disabled={!historyController.canRedo()}
+            onClick={redoMove}
+            title={`Redo (${shortcutHintLabel(SHORTCUT_ACTIONS.redo)})`}
+          >
+            Redo
+          </button>
+          <button
+            aria-keyshortcuts="F"
+            aria-label={`Show ${orientation === 'w' ? 'Black' : 'White'} at the bottom`}
+            onClick={() => setOrientation(orientation === 'w' ? 'b' : 'w')}
+            title={`Flip board (${shortcutHintLabel(SHORTCUT_ACTIONS.flip)})`}
+          >
+            Flip Board
+          </button>
+          <button
+            aria-pressed={!soundMuted}
+            aria-label={soundMuted ? 'Unmute sound effects' : 'Mute sound effects'}
+            onClick={() => setSoundMuted(soundController.toggleMuted())}
+            title={soundMuted ? 'Unmute sound' : 'Mute sound'}
+          >
+            {soundMuted ? '🔇 Sound Off' : '🔊 Sound On'}
+          </button>
+
+          {mode === 'bot' && (
+            <div className="bot-options">
+              <div className="color-controls" aria-label="Choose your color">
+                <span>You play:</span>
+                <button
+                  aria-pressed={playerColor === 'w'}
+                  onClick={() => changePlayerColor('w')}
+                >
+                  White
+                </button>
+                <button
+                  aria-pressed={playerColor === 'b'}
+                  onClick={() => changePlayerColor('b')}
+                >
+                  Black
+                </button>
+              </div>
+              <div className="difficulty-controls" aria-label="Bot difficulty">
+                {Object.keys(depthMap).map((level) => (
+                  <button
+                    aria-pressed={difficulty === level}
+                    key={level}
+                    onClick={() => setDifficulty(level)}
+                    style={difficultyButtonStyle(difficulty === level)}
+                  >
+                    {level[0].toUpperCase() + level.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <TimeControlPicker onChange={changeTimeControl} selected={timeControl} />
+
+        <div className="export-controls" aria-label="Export game">
+          <button disabled={!history.length} onClick={copyGamePgn}>Copy PGN</button>
+          <button disabled={!history.length} onClick={downloadGamePgn}>Download PGN</button>
+          <span aria-live="polite">{copyStatus}</span>
+        </div>
+
+        <CreditsPanel />
+
+        <button className="start-match" onClick={() => setScreen('game')}>
+          {history.length ? 'Resume Match' : 'Start Match'}
+        </button>
+      </main>
+    )
+  }
+
   return (
-    <main className="game-shell">
-      <h1>⚔️ BATTLE CHESS</h1>
-      <p>Real chess underneath. A cinematic war game on top.</p>
+    <main className="play-screen">
       <p className="visually-hidden">
         Keyboard shortcuts: {shortcutHintLabel(SHORTCUT_ACTIONS.undo)} undo,{' '}
         {shortcutHintLabel(SHORTCUT_ACTIONS.redo)} redo,{' '}
@@ -548,92 +640,13 @@ export default function App() {
         {shortcutHintLabel(SHORTCUT_ACTIONS.clearSelection)} clear selection.
       </p>
 
-      <div className="game-controls">
-        <button onClick={() => changeMode('human')}>Human vs Human</button>
-        <button onClick={() => changeMode('bot')}>Human vs Bot</button>
-        <button onClick={resetGame}>Reset Match</button>
-        <button
-          aria-keyshortcuts="Control+Z Meta+Z"
-          disabled={!historyController.canUndo(mode, playerColor)}
-          onClick={undoMove}
-          title={`Undo (${shortcutHintLabel(SHORTCUT_ACTIONS.undo)})`}
-        >
-          Undo
-        </button>
-        <button
-          aria-keyshortcuts="Control+Y Meta+Y Control+Shift+Z Meta+Shift+Z"
-          disabled={!historyController.canRedo()}
-          onClick={redoMove}
-          title={`Redo (${shortcutHintLabel(SHORTCUT_ACTIONS.redo)})`}
-        >
-          Redo
-        </button>
-        <button
-          aria-keyshortcuts="F"
-          aria-label={`Show ${orientation === 'w' ? 'Black' : 'White'} at the bottom`}
-          onClick={() => setOrientation(orientation === 'w' ? 'b' : 'w')}
-          title={`Flip board (${shortcutHintLabel(SHORTCUT_ACTIONS.flip)})`}
-        >
-          Flip Board
-        </button>
-        <button
-          aria-pressed={!soundMuted}
-          aria-label={soundMuted ? 'Unmute sound effects' : 'Mute sound effects'}
-          onClick={() => setSoundMuted(soundController.toggleMuted())}
-          title={soundMuted ? 'Unmute sound' : 'Mute sound'}
-        >
-          {soundMuted ? '🔇 Sound Off' : '🔊 Sound On'}
-        </button>
-
-        {mode === 'bot' && (
-          <div className="bot-options">
-            <div className="color-controls" aria-label="Choose your color">
-              <span>You play:</span>
-              <button
-                aria-pressed={playerColor === 'w'}
-                onClick={() => changePlayerColor('w')}
-              >
-                White
-              </button>
-              <button
-                aria-pressed={playerColor === 'b'}
-                onClick={() => changePlayerColor('b')}
-              >
-                Black
-              </button>
-            </div>
-            <div className="difficulty-controls" aria-label="Bot difficulty">
-              {Object.keys(depthMap).map((level) => (
-                <button
-                  aria-pressed={difficulty === level}
-                  key={level}
-                  onClick={() => setDifficulty(level)}
-                  style={difficultyButtonStyle(difficulty === level)}
-                >
-                  {level[0].toUpperCase() + level.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <TimeControlPicker
-        onChange={changeTimeControl}
-        selected={timeControl}
-      />
-
-      <div className="export-controls" aria-label="Export game">
-        <button disabled={!history.length} onClick={copyGamePgn}>
-          Copy PGN
-        </button>
-        <button disabled={!history.length} onClick={downloadGamePgn}>
-          Download PGN
-        </button>
-        <span aria-live="polite">{copyStatus}</span>
-      </div>
-
-      <CreditsPanel />
+      <button
+        className="play-menu"
+        disabled={thinking || activeCapture || activeMove || pendingPromotion}
+        onClick={() => setScreen('menu')}
+      >
+        Menu
+      </button>
 
       <h2
         className={`game-status game-status--${matchFeedback}`}

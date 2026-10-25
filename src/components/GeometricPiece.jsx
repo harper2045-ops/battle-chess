@@ -1,21 +1,39 @@
-import { useRef, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-// Target heights for each piece type
-const PIECE_HEIGHTS = {
-  p: 0.78,
-  n: 0.98,
-  b: 1.0,
-  r: 0.99,
-  q: 1.0,
-  k: 1.12,
-}
+// Cache loaded source scenes; each rendered piece receives its own object clone.
+const modelCache = {}
 
-function PieceModel({ type, color }) {
+function PieceModel({ type, color, onLoaded }) {
+  const [scene, setScene] = useState(null)
   const path = `/models/kings-gambit-ivory/${type}/${color}.glb`
-  const { scene } = useGLTF(path)
-  return <primitive object={scene} />
+  const model = useMemo(() => scene?.clone(true), [scene])
+
+  useEffect(() => {
+    if (modelCache[path]) {
+      setScene(modelCache[path])
+      onLoaded?.()
+      return
+    }
+
+    const loader = new GLTFLoader()
+    loader.load(
+      path,
+      (gltf) => {
+        modelCache[path] = gltf.scene
+        setScene(gltf.scene)
+        onLoaded?.()
+      },
+      undefined,
+      (error) => {
+        console.error(`Failed to load ${path}:`, error)
+      }
+    )
+  }, [path, onLoaded])
+
+  if (!model) return null
+  return <primitive object={model} />
 }
 
 export function GeometricPiece({ piece, selected = false, action = 'idle', yaw }) {
@@ -74,14 +92,13 @@ export function GeometricPiece({ piece, selected = false, action = 'idle', yaw }
   })
 
   const facing = yaw ?? (piece.color === 'b' ? Math.PI : 0)
-  const height = PIECE_HEIGHTS[piece.type]
 
   // Selection ring
-  const ringColor = selected ? '#ffd45a' : piece.color === 'w' ? '#f2ddad' : '#5978b8'
+  const ringColor = selected ? '#ffd45a' : piece.color === 'w' ? '#27a8ff' : '#ff6a2a'
 
   return (
     <group position-y={0.04} rotation-y={facing}>
-      <group ref={groupRef} scale={height}>
+      <group ref={groupRef}>
         <PieceModel type={piece.type} color={piece.color} />
       </group>
       <mesh position-y={0.01} rotation-x={-Math.PI / 2}>

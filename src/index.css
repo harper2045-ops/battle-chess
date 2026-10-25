@@ -59,12 +59,13 @@ button {
 }
 
 .game-shell {
-  min-height: 100vh;
+  min-height: 100dvh;
   box-sizing: border-box;
-  padding: 24px;
+  padding: 16px 24px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 8px;
   color: white;
   background: radial-gradient(circle at top, #242449, #090910);
   font-family: system-ui, sans-serif;
@@ -861,14 +862,136 @@ button {
   }
 }
 
+.menu-screen {
+  width: min(100%, 800px);
+  margin-inline: auto;
+  justify-content: center;
+}
+
+.menu-screen > h1 {
+  margin: 0;
+  color: white;
+}
+
+.start-match {
+  margin-top: 12px;
+  padding: 12px 28px;
+  border: 1px solid #58c7ff;
+  border-radius: 8px;
+  color: #07121c;
+  background: #75d2ff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.play-screen {
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  background: radial-gradient(circle at top, #242449, #090910);
+  font-family: system-ui, sans-serif;
+}
+
+.play-menu {
+  align-self: flex-start;
+  padding: 8px 18px;
+}
+
+.play-screen .chess-board-3d {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 960px) {
+  .play-screen {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-areas:
+      'board menu'
+      'board status'
+      'board thinking'
+      'board alert'
+      'board banner'
+      'board clocks'
+      'captured details';
+    align-items: start;
+    gap: 10px 16px;
+  }
+
+  .play-screen > * {
+    min-width: 0;
+  }
+
+  .play-menu { grid-area: menu; }
+  .play-screen .game-status { grid-area: status; }
+  .play-screen .bot-thinking { grid-area: thinking; }
+  .play-screen .match-alert { grid-area: alert; }
+  .play-screen .battle-banner { grid-area: banner; }
+  .play-screen .chess-clocks { grid-area: clocks; }
+  .play-screen .chess-board-3d { grid-area: board; }
+  .play-screen .captured-pieces { grid-area: captured; }
+  .play-screen .match-details { grid-area: details; }
+
+  .play-screen .battle-banner,
+  .play-screen .chess-clocks,
+  .play-screen .match-details {
+    width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+  }
+
+  .play-screen .chess-board-3d {
+    width: 100%;
+    max-width: none;
+  }
+}
+
 @media (max-width: 600px) {
   .game-shell {
-    padding: 16px 10px 24px;
+    padding: 10px 10px 20px;
+    gap: 6px;
+  }
+
+  .game-shell > h1 {
+    margin: 0;
+    font-size: 2rem;
+    color: white;
+  }
+
+  .game-shell > p:not(.visually-hidden) {
+    font-size: 0.9rem;
+  }
+
+  .game-controls {
+    gap: 6px;
+    margin: 4px 0;
+  }
+
+  .time-controls {
+    width: 100%;
+    margin: 0;
+    padding: 6px 8px 8px;
+    box-sizing: border-box;
+  }
+
+  .export-controls,
+  .credits-controls {
+    margin: 0;
+  }
+
+  .game-status {
+    margin-bottom: 4px;
   }
 
   .chess-board-3d {
-    width: min(96vw, 760px);
+    width: 100%;
     aspect-ratio: 1 / 1;
+    box-sizing: border-box;
   }
 
   .board-touch-hint {
@@ -950,8 +1073,8 @@ button {
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 1600px;
   margin: 0 auto;
   text-align: center;
   border-inline: 1px solid var(--border);

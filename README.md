@@ -43,6 +43,23 @@ npm install
 npm run dev
 ```
 
+## Regenerate the sci-fi models
+
+The standalone Blender script creates all 32 pieces, 12 modular gameplay GLBs,
+and board/full-scene exports without downloaded assets or third-party add-ons.
+It replaces the active Blender scene, so save other work first.
+
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender \
+  --background --factory-startup \
+  --python scripts/generate_pieces_blender.py
+```
+
+Set `SCI_FI_CHESS_OUTPUT` to override the repository/export root. See
+[`docs/blender-export-pipeline.md`](./docs/blender-export-pipeline.md) for
+Scripting-workspace instructions, exact glTF settings, compression options,
+engine integration, and validation commands.
+
 ## Scripts
 
 - `npm run dev` — start the Vite dev server.

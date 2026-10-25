@@ -100,6 +100,15 @@ describe('squareHighlightColor', () => {
         isLastMove: false,
         isDark: true,
       }),
-    ).toBe('#755038')
+    ).toBe('#172633')
+
+    expect(
+      squareHighlightColor({
+        isSelected: false,
+        isLegal: false,
+        isLastMove: false,
+        isDark: false,
+      }),
+    ).toBe('#405565')
   })
 })

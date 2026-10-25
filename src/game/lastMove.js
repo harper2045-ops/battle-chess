@@ -31,5 +31,5 @@ export function squareHighlightColor({
   if (isSelected) return '#d5a229'
   if (isLegal) return '#63895b'
   if (isLastMove) return isDark ? '#9a7a32' : '#e2c76a'
-  return isDark ? '#755038' : '#d8bd86'
+  return isDark ? '#172633' : '#405565'
 }

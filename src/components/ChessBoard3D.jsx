@@ -1,6 +1,8 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
+import { PMREMGenerator } from 'three'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import {
   captureDuration,
   getCaptureActions,
@@ -24,6 +26,7 @@ import {
   getOrbitTouches,
   getSquareHitHeight,
 } from '../game/boardInput.js'
+import { getBoardCameraPosition } from '../game/boardCamera.js'
 
 const pieceNames = {
   p: 'Pawn',
@@ -186,15 +189,36 @@ function Piece({ piece, selected = false, action = 'idle', yaw }) {
   )
 }
 
-function Camera({ orientation }) {
-  const { camera, invalidate } = useThree()
+function MetallicEnvironment() {
+  const { gl, scene } = useThree()
 
   useEffect(() => {
-    camera.position.set(0, 8.4, orientation === 'w' ? 8.8 : -8.8)
+    const room = new RoomEnvironment()
+    const generator = new PMREMGenerator(gl)
+    const target = generator.fromScene(room, 0.04)
+    const previous = scene.environment
+    scene.environment = target.texture
+
+    return () => {
+      scene.environment = previous
+      target.dispose()
+      generator.dispose()
+      room.dispose()
+    }
+  }, [gl, scene])
+
+  return null
+}
+
+function Camera({ orientation }) {
+  const { camera, invalidate, size } = useThree()
+
+  useEffect(() => {
+    camera.position.set(...getBoardCameraPosition(orientation, size.width / size.height))
     camera.lookAt(0, 0, 0)
     camera.updateProjectionMatrix()
     invalidate()
-  }, [camera, invalidate, orientation])
+  }, [camera, invalidate, orientation, size])
 
   return null
 }
@@ -355,11 +379,12 @@ function Scene({
   return (
     <>
       <Camera orientation={orientation} />
-      <ambientLight intensity={1.35} />
+      <MetallicEnvironment />
+      <ambientLight intensity={1.1} />
       <directionalLight position={[2, 9, 5]} intensity={2.2} />
       <mesh position-y={-0.22}>
         <boxGeometry args={[8.6, 0.38, 8.6]} />
-        <meshStandardMaterial color="#291e19" roughness={0.78} />
+        <meshStandardMaterial color="#101923" metalness={0.9} roughness={0.3} />
       </mesh>
 
       {board.flat().map(({ piece, square }) => {
@@ -404,7 +429,8 @@ function Scene({
                   isLastMove,
                   isDark,
                 })}
-                roughness={0.7}
+                metalness={0.62}
+                roughness={0.34}
                 emissive={isLastMove && !isSelected && !isLegal ? '#6a5418' : '#000000'}
                 emissiveIntensity={isLastMove && !isSelected && !isLegal ? 0.22 : 0}
               />
