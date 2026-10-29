@@ -208,9 +208,22 @@ Pipeline per unit:
   separate props (AssetFurnace prop mode), then attach them rigidly to the hand bones
   in Three.js. This is standard game practice, and it lets the battle theater swap or
   drop weapons.
-- Hunyuan3D 2.1 (Mac port, `~/hunyuan3d-2.1-mac`) is cloned but not installed yet:
-  Claude's auto-mode safety check blocks running its installer, so the user runs it.
-  Then the same concept picture goes through both for a side-by-side comparison.
+### Pixal3D vs Hunyuan3D 2.1 (same picture, 2026-10-29)
+
+Hunyuan3D 2.1 was installed through the Mac port in `~/hunyuan3d-2.1-mac` and run
+with `scripts/assets/hunyuan21_generate.py` (50 steps, octree 384). Both were rendered
+with `scripts/assets/render_compare.py`, using the same angles and lights. The sheet is
+`docs/design/pawn-pixal3d-vs-hunyuan21.png`.
+
+| | Pixal3D | Hunyuan3D 2.1 |
+|---|---|---|
+| Time | 3 min 40 s (includes clean-up, rig and a move) | 2 min 48 s (shape 2:15, paint 0:32) |
+| Shape | crisp face, spear tip, armour edges | clean and solid but softer; blobby spear tip, flatter face |
+| Paint | matches the picture closely on all sides | muddy and wrong colours; the Mac port only allows its lowest paint setting (6 views at 256 px), because the higher ones need flash attention, which Macs don't have |
+| Problems | none besides the held-item rigging issue above | its GLB export scrambles the paint (the OBJ copy is fine); stray floating specks |
+
+**Decision: Pixal3D for all units.** Hunyuan3D 2.1 stays installed as a backup
+shape-only generator. Its painting is what loses on this Mac, not its shapes.
 5. **Arena sets** for cutaways: 1–3 small sets (castle courtyard, stone bridge,
    throne room for king deaths). Build in Blender from a few generated props, or a
    single generated panorama behind a simple floor. Not decided; keep it cheap.
