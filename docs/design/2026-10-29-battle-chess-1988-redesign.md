@@ -234,14 +234,29 @@ setting with that patch allowed.
 - **6 views × 512 px (the README setting):** worked. Shape 1:53, paint 1:05, 2:58 in
   total. The paint is clean steel with gold trim and real metallic and roughness maps.
   Sheet: `docs/design/pawn-pixal3d-vs-hunyuan21-official.png`.
-- **8 views × 768 px (the official app setting):** **kernel-panicked the 64 GB M5 Max**.
-  Memory compression hit 100% of its segment limit with 87 swap files, and the watchdog
-  restarted the machine. The script now refuses anything above 6 × 512 unless
-  `--allow-crash-risk` is passed. Don't try it again on this Mac.
+- **8 views × 768 px (the official app setting), first attempt:** **kernel-panicked the
+  64 GB M5 Max**. Memory compression hit 100% of its segment limit with 87 swap files,
+  and the watchdog restarted the machine.
+- **Why:** the multiview attention grows with the square of views × patches. 768 px with
+  8 views is about 9× the work of 512 px with 6 views, with a 607 GiB full score matrix.
+  The port also turns off PyTorch's memory cap (`PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0`),
+  so instead of raising an error it pushed macOS into swap until it froze.
+- **Fixed, in `hunyuan21_generate.py`:** memory cap back on (70%), a memory watchdog,
+  feed-forward chunking (the UNet blocks already support it), and plain sliced attention
+  (matmul → softmax → matmul) in place of MPS SDPA. MPS SDPA was holding 21.8 GiB of
+  scratch memory outside PyTorch's allocator. The plain version matches PyTorch's own
+  attention to within fp16 rounding. Above 6 × 512 these switch on automatically.
+- **8 × 768 result:** paint took **10 min 45 s**, the lowest free memory was 14.4 GiB,
+  and nothing swapped. It is the best Hunyuan output: visible chainmail, crisp gold trim,
+  a sharper face, and a correct blue tabard on the back.
+  Sheet: `docs/design/pawn-pixal3d-vs-hunyuan21-768.png` (rows: Pixal3D, Hunyuan 512,
+  Hunyuan 768).
 
-Result: at 512 px Hunyuan is competitive. It's a little faster and has proper PBR metal.
-Pixal3D is still closer to the concept picture: ivory rather than steel, a sharper face,
-a crisper shield.
+Result: Hunyuan at 768 has the richest material detail: real steel, chainmail and
+proper PBR maps. Pixal3D is still the closest to the concept picture: ivory rather than
+dark steel, and a crisper shield. It's a style choice more than a quality gap now.
+Per unit, Pixal3D takes about 4 minutes and Hunyuan 768 about 13 minutes (shape 2 min,
+paint 11 min).
 
 **Decision (pending the user's final call): Pixal3D for all units**, because it matches
 the art direction and is already wired into AssetFurnace's rig and moves. Hunyuan 512
