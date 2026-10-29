@@ -22,7 +22,7 @@ Stockfish only picks moves, and nothing in presentation can change an outcome.
 | 1 | Who builds | Kimi K3.1 Pro gets the hardest code tasks first (handoff: `docs/handoff/kimi-k3.1-pro.md`). Claude does asset and audio generation and finishes whatever Kimi doesn't. |
 | 2 | Art style | Medieval fantasy. |
 | 3 | Battles | 1988-style: a **cutaway** fight scene for every capture, then back to the board. Not an on-board camera push-in. |
-| 4 | Models | Generate locally with open Hugging Face models (see "Asset pipeline"). The current Ivory Kingdom rigged characters are the placeholder cast until generated ones exist. |
+| 4 | Models | Generate, rig and animate fully locally on this Mac with open models (see "Asset pipeline"). No Mixamo. The current Ivory Kingdom rigged characters are the placeholder cast until generated ones exist. |
 | 5 | Base branch | Build from `main` (animated fantasy characters). The sci-fi static pieces on `polish/touch-mobile-board` are parked, not merged. |
 | 6 | Play screen | Board fills the screen edge to edge. No clocks, captured pieces, banners, battle report, "Selected", move history, material bar or bot-thinking card. One small corner menu button that fades when idle. |
 | 7 | Camera | One fixed 1988-style 3/4 perspective. No user zoom, orbit or pan. The only camera change is the battle cutaway. Flip board still works (it swaps which side is at the bottom). |
@@ -144,34 +144,57 @@ material tint (ivory vs. obsidian) so one model per type serves both sides.
   `aria-live` text for check/mate/captures in a visually hidden element (replaces
   the visible banners for screen readers).
 
-## Asset pipeline (researched 2026-10-29)
+## Asset pipeline (second research sweep, official docs, 2026-10-29)
 
-Machine: Mac17,6, 64 GB, Blender installed in /Applications.
+**Everything runs locally on this Mac. No Mixamo, no cloud services** (user
+decision, 2026-10-29). Machine: Apple M5 Max, 64 GB unified memory, 561 GB free,
+Xcode and Blender 5.2.1 installed. That is twice the memory AssetFurnace recommends
+and well above every model's stated minimum, so use the high-quality settings by
+default.
 
-1. **Concept image per unit** (6 units): write a prompt, or generate with
-   Qwen-Image locally. Front-facing T-pose or A-pose, plain background, medieval
-   fantasy, readable silhouette from far away.
-2. **Image → 3D mesh: [AssetFurnace](https://github.com/Bingeljell/image-to-3dlab)**
-   (Apache-2.0, updated Oct 2026). It wraps the open models behind one CLI and runs
-   on Apple Silicon:
-   - **Pixal3D** (MIT): their default, one pass, keeps flat saturated colours.
-     *Recommended.*
-   - **TRELLIS.2** (MIT, 4B): highest detail, often needs a repaint pass.
-   - Hunyuan3D 2.1: good, but its licence excludes the EU/UK/South Korea.
-3. **Rigging:**
-   - *Recommended:* **Mixamo auto-rigger** for all six units (they're all
-     bipeds, including the golem). Every unit then shares one standard skeleton, so
-     Mixamo's large library of sword, spear, spell and death animations works on all
-     of them without retargeting. Caveat: Mixamo is a free Adobe web service, not
-     local.
-   - Fully local alternative: **SkinTokens** (successor to UniRig, VAST-AI,
-     reported MIT) through AssetFurnace's auto-rig, which also has 21 preset moves.
-     The presets are walk/run/jump/dance/kicks; they likely lack weapon combat, so
-     fights would need Mixamo clips retargeted in Blender anyway.
-4. **Blender cleanup** (scripted, headless): decimate to about 15–25k triangles per
-   unit, check scale (1 board square = 1 unit), origin at feet, export each clip as
-   its own GLB to match the existing Ivory Kingdom layout, then `gltfpack` for
+What the official repos say (and why we don't run them directly):
+
+| Model | Job | Official platform | Licence |
+|---|---|---|---|
+| [TRELLIS.2](https://github.com/microsoft/TRELLIS.2) (`microsoft/TRELLIS.2-4B`) | image → PBR mesh | Linux + NVIDIA 24 GB only | MIT |
+| [Hunyuan3D 2.1](https://huggingface.co/tencent/Hunyuan3D-2.1) | image → mesh + PBR paint | NVIDIA; Mac via community forks | Tencent community (fine for the user's country) |
+| [SkinTokens](https://github.com/VAST-AI-Research/SkinTokens) (`VAST-AI/SkinTokens`, successor to UniRig) | mesh → skeleton + skin weights | NVIDIA 14 GB (official) | MIT |
+| [HY-Motion 1.0](https://huggingface.co/tencent/HY-Motion-1.0) | text → body motion | macOS, Windows, Linux (official) | see repo |
+| [UniMate](https://github.com/Friedrich-M/UniMate) | text → motion on *any* rigged GLB | not stated | code MIT, weights CC BY-NC |
+
+The official mesh and rig repos assume NVIDIA. The tool that already ports them to
+Apple Silicon and joins them up is
+**[AssetFurnace / image-to-3dlab](https://github.com/Bingeljell/image-to-3dlab)**
+(Apache-2.0, about 1,000 stars, updated today). Its Mac routes:
+
+- **Pixal3D** (MIT): about 6 min per model on a base M5. Default.
+- **TRELLIS.2 Apple Silicon port**: 15–35 min, about 2× faster with the `mlx`
+  attention backend. Highest detail; use it for the hero units (king, queen).
+- **Hunyuan3D-MLX**: about 9 min.
+- **SkinTokens auto-rig** in pure PyTorch, then a bind step in Blender.
+- **Built-in motion clips** made with NVIDIA Kimodo, retargeted to the rig.
+  They already include the battle basics: `idle`, `walk`, `fight_stance`,
+  `sword_swing`, `punch`, `kick`, `hit_react`, `death` (two takes each).
+- An MCP server, so Claude can drive it (`claude mcp add assetfurnace -- ~/image-to-3dlab/lab mcp`).
+
+Pipeline per unit:
+
+1. **Concept image**: front-facing A-pose, plain background, medieval fantasy,
+   readable silhouette. Generated locally (ComfyUI image models or AssetFurnace's
+   Qwen-Image).
+2. **Image → mesh** with Pixal3D (TRELLIS.2 for king and queen).
+3. **Auto-rig** with SkinTokens, then apply the AssetFurnace clips.
+4. **Extra moves the presets lack** (spear thrust, spell cast, golem smash, king
+   falling): generate with **HY-Motion 1.0** (officially supports macOS; the 26 GB
+   model fits easily) and retarget in Blender. UniMate is the backup if HY-Motion's
+   output is hard to retarget.
+5. **Blender cleanup** (scripted, headless): decimate to about 20–40k triangles per
+   unit, scale to 1 board square = 1 unit, origin at the feet, and export each clip as
+   its own GLB to match the existing Ivory Kingdom layout. Then run `gltfpack` for
    smaller files.
+
+Status: the AssetFurnace install was blocked by Claude's auto-mode safety check
+(it runs downloaded code), so the user needs to approve or run it.
 5. **Arena sets** for cutaways: 1–3 small sets (castle courtyard, stone bridge,
    throne room for king deaths). Build in Blender from a few generated props, or a
    single generated panorama behind a simple floor. Not decided; keep it cheap.
