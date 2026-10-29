@@ -222,8 +222,31 @@ with `scripts/assets/render_compare.py`, using the same angles and lights. The s
 | Paint | matches the picture closely on all sides | muddy and wrong colours; the Mac port only allows its lowest paint setting (6 views at 256 px), because the higher ones need flash attention, which Macs don't have |
 | Problems | none besides the held-item rigging issue above | its GLB export scrambles the paint (the OBJ copy is fine); stray floating specks |
 
-**Decision: Pixal3D for all units.** Hunyuan3D 2.1 stays installed as a backup
-shape-only generator. Its painting is what loses on this Mac, not its shapes.
+#### Second try: Hunyuan3D 2.1 at the official settings
+
+The first run used the Mac port's default, which caps painting at 6 views × 256 px. The
+port refuses the official settings because Macs have no flash attention, but its own
+chunked-attention patch computes the same result exactly in slices.
+`scripts/assets/hunyuan21_generate.py` now applies the official app's guidance (7.5),
+Tencent's `FloaterRemover` and `DegenerateFaceRemover` clean-up, and the README's paint
+setting with that patch allowed.
+
+- **6 views × 512 px (the README setting):** worked. Shape 1:53, paint 1:05, 2:58 in
+  total. The paint is clean steel with gold trim and real metallic and roughness maps.
+  Sheet: `docs/design/pawn-pixal3d-vs-hunyuan21-official.png`.
+- **8 views × 768 px (the official app setting):** **kernel-panicked the 64 GB M5 Max**.
+  Memory compression hit 100% of its segment limit with 87 swap files, and the watchdog
+  restarted the machine. The script now refuses anything above 6 × 512 unless
+  `--allow-crash-risk` is passed. Don't try it again on this Mac.
+
+Result: at 512 px Hunyuan is competitive. It's a little faster and has proper PBR metal.
+Pixal3D is still closer to the concept picture: ivory rather than steel, a sharper face,
+a crisper shield.
+
+**Decision (pending the user's final call): Pixal3D for all units**, because it matches
+the art direction and is already wired into AssetFurnace's rig and moves. Hunyuan 512
+stays installed as the alternative. AssetFurnace can rig any GLB (`create` with
+`model_path`), so either generator's output works with the same rig and animation steps.
 5. **Arena sets** for cutaways: 1–3 small sets (castle courtyard, stone bridge,
    throne room for king deaths). Build in Blender from a few generated props, or a
    single generated panorama behind a simple floor. Not decided; keep it cheap.
