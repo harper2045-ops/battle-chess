@@ -193,8 +193,24 @@ Pipeline per unit:
    its own GLB to match the existing Ivory Kingdom layout. Then run `gltfpack` for
    smaller files.
 
-Status: the AssetFurnace install was blocked by Claude's auto-mode safety check
-(it runs downloaded code), so the user needs to approve or run it.
+### First test unit (2026-10-29)
+
+- Installed: AssetFurnace v0.5.3 in `~/image-to-3dlab` with Pixal3D (built with
+  Metal; needed `brew install ninja`) and SkinTokens auto-rig.
+- Concept: `scripts/assets/concept_images.py` (Qwen-Image 2.1 + Lightning in the
+  local ComfyUI, about 10 s per image). Pawn spearman, seed 4.
+- Pixal3D: picture → model → 40k-triangle finish → skeleton (27 bones) →
+  `sword_swing`, **3 min 40 s in total** on the M5 Max. Output 9 MB GLB with 2048²
+  textures. The model itself looks excellent from all four sides.
+- **Problem found:** held items get skinned to the body, so the spear bends like rubber
+  and the shield crumples when the unit moves.
+  **Decision:** generate units **empty-handed**. Generate weapons and shields as
+  separate props (AssetFurnace prop mode), then attach them rigidly to the hand bones
+  in Three.js. This is standard game practice, and it lets the battle theater swap or
+  drop weapons.
+- Hunyuan3D 2.1 (Mac port, `~/hunyuan3d-2.1-mac`) is cloned but not installed yet:
+  Claude's auto-mode safety check blocks running its installer, so the user runs it.
+  Then the same concept picture goes through both for a side-by-side comparison.
 5. **Arena sets** for cutaways: 1–3 small sets (castle courtyard, stone bridge,
    throne room for king deaths). Build in Blender from a few generated props, or a
    single generated panorama behind a simple floor. Not decided; keep it cheap.
