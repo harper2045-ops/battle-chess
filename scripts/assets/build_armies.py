@@ -26,7 +26,7 @@ RESULTS = REPO / "scripts" / "assets" / "armies.json"
 
 # Concept seed picked per unit from the contact sheets (2026-10-29).
 PICKS = {"w_p": 2, "w_n": 2, "w_b": 1, "w_r": 2, "w_q": 2, "w_k": 2,
-         "b_p": 2, "b_n": 2, "b_b": 2, "b_r": 2, "b_q": 2, "b_k": 2}
+         "b_p": 2, "b_n": 2, "b_b": 2, "b_r": 2, "b_q": 12, "b_k": 2}  # b_q 12: shorter-cloak prompt
 NAMES = {"p": "pawn", "n": "knight", "b": "bishop", "r": "rook golem", "q": "queen", "k": "king"}
 
 

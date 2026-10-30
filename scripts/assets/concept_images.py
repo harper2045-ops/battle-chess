@@ -52,7 +52,9 @@ ROLES = {
     "r": "A hulking stone golem built like a castle tower, carved from {stone}: battlement "
          "crenellations on its shoulders and head, massive blocky arms and legs, small glowing eyes.",
     "q": "A regal sorceress queen in a fitted {cloth} gown with {metal} bodice, shoulder guards "
-         "and bracers, a slim crown, long flowing hair, a floor-length cloak.",
+         "and bracers, a slim crown, long flowing hair, a cloak that ends at mid-calf. The gown "
+         "and cloak stop above the ground: armoured boots and feet clearly visible, nothing "
+         "trailing or pooling on the floor.",  # a pooled train became a floor slab in Hunyuan
     "k": "An old bearded warrior king in {metal} under a heavy {cloth} royal cloak with fur "
          "trim, a large jewelled crown, a broad belt.",
 }

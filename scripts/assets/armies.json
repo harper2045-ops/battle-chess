@@ -143,7 +143,9 @@
   "final": {
    "rigged": "output/armies-final/b_q_rigged.glb",
    "idle": "output/armies-final/b_q_idle.glb"
-  }
+  },
+  "rerigged": true,
+  "regenerated": "concept seed 12 with the shorter-cloak prompt; seed-2 builds fused a floor slab"
  },
  "b_k": {
   "asset_id": "1c8d1216aed5",

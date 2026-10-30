@@ -320,9 +320,26 @@ are in `scripts/assets/armies.json`.
   idle folds it up, with its arms through its legs. Retry the rig only.
 - **King:** good overall, but the cloak edge near the right elbow stretches into a spike
   (skin weights). Fix with the golem.
-- Black army so far: pawn, knight and bishop done (about 6½–7½ min each). Stopped during
-  the black rook's rig because the user was updating the Mac. Resume with
-  `--only b_r,b_q,b_k` after starting `~/image-to-3dlab/lab mcp --http`.
+- Black army: about 6½–7½ min per unit.
+- **All 12 built and rigged (2026-10-30).** Finals (`{unit}_rigged.glb`, `{unit}_idle.glb`,
+  8–11 MB each) are in `~/image-to-3dlab/output/armies-final/`. Lineups:
+  `docs/design/army-white-lineup.png`, `docs/design/army-black-lineup.png`.
+- **Re-rigging:** `scripts/assets/rerig.py` re-rolls SkinTokens with AssetFurnace's own
+  rig, check and retarget steps until the skeleton is humanoid with at most 34 bones
+  (extra bones meant a broken rig; fewer were fine). It fixed the white golem (34),
+  black golem (28, idles and walks cleanly) and white king (34, the arm and cloak spikes
+  are gone). The black king's floor-length cloak hid his legs: 1 of 6 tries passed, with
+  37 bones, which idles cleanly and walks without tearing the cloak (accepted).
+- **Black queen:** two Hunyuan seeds fused a floor slab out of her pooled train. Fixed at
+  the concept stage: the queen prompt now asks for a mid-calf cloak with feet visible
+  (concept seed 12). Lesson: **no trailing cloth touching the ground in concepts for
+  Hunyuan.**
+- Known small issues: the black army's faces render orange-tan, the black knight's plume
+  is stringy, the black pawn's tabard has two small dark holes, and the white queen leans
+  a little in her idle. None of these matter at board scale; revisit for close-up battle
+  shots.
+- Next: compress for the web (gltfpack / texture compression; currently about 120 MB for
+  12 idle GLBs), then attach separate weapon and shield props to the hand bones.
 
 **Decision (user, 2026-10-29): split the armies.**
 
