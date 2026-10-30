@@ -320,8 +320,9 @@ are in `scripts/assets/armies.json`.
   idle folds it up, with its arms through its legs. Retry the rig only.
 - **King:** good overall, but the cloak edge near the right elbow stretches into a spike
   (skin weights). Fix with the golem.
-- Paused after the black pawn (user updating the Mac). Resume with
-  `--only b_n,b_b,b_r,b_q,b_k`.
+- Black army so far: pawn, knight and bishop done (about 6½–7½ min each). Stopped during
+  the black rook's rig because the user was updating the Mac. Resume with
+  `--only b_r,b_q,b_k` after starting `~/image-to-3dlab/lab mcp --http`.
 
 **Decision (user, 2026-10-29): split the armies.**
 
