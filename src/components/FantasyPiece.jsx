@@ -4,7 +4,7 @@ import { useGLTF } from '@react-three/drei'
 import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat } from 'three'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
 import { normalizeIvoryActor } from './ivoryNormalize.js'
-import { DRACO_PATH, PROP_URLS, UNITS, unitFor } from '../battle/units.js'
+import { DRACO_PATH, MODEL_TURN, PROP_URLS, UNITS, unitFor } from '../battle/units.js'
 import { attachProps } from '../battle/propAttach.js'
 
 /** ChessBoard3D square top sits at y ≈ 0.04 (mesh at -0.02, height 0.12). */
@@ -115,7 +115,11 @@ export function FantasyPiece({ piece, selected = false, action = 'idle', yaw }) 
       position-y={BOARD_SURFACE_Y}
       rotation-y={facing}
     >
-      <primitive object={actor} dispose={null} />
+      {/* The generated models' front is the far side from Ivory's; turn them round
+          here so idle, walk and capture yaw all stay as they were. */}
+      <group rotation-y={MODEL_TURN}>
+        <primitive object={actor} dispose={null} />
+      </group>
       <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
         <ringGeometry args={[ringInner, ringOuter, 24]} />
         <meshBasicMaterial

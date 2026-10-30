@@ -14,6 +14,13 @@ export const DRACO_PATH = '/draco/'
 
 const MODEL_ROOT = '/models/armies'
 
+/**
+ * Half-turn applied to every unit model. The board's yaw (white 0, black π, and move
+ * yaw) was set for the Ivory Kingdom models; the generated ones face the other way, so
+ * without this both armies turned their backs on each other (seen 2026-10-30).
+ */
+export const MODEL_TURN = Math.PI
+
 /** Clip names inside every unit GLB (scripts/assets/pack_units.py). */
 export const CLIPS = ['idle', 'attack', 'hit', 'death', 'walk']
 

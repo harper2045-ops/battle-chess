@@ -402,8 +402,11 @@ The user chose weapons before compression. Loadout (decided here; flag if wrong)
   under its hand bone: offset = inverse(bindMatrix × inverse(boneInverse)) × placement.
   `FantasyPiece.jsx` loads the unit GLB and all props in one call each (so a promoting
   pawn doesn't change the hook count), sizes the body with the existing
-  `TARGET_HEIGHT`s, then attaches props. Old and new models both face +Z, so facing
-  code is unchanged. The Ivory Kingdom files stay in `public/models/` but are no longer
+  `TARGET_HEIGHT`s, then attaches props. The generated models' front is the opposite
+  side from Ivory's (the user saw both armies facing the back of the board; the
+  feet-based "forward" check had said both face +Z), so `MODEL_TURN` (a half-turn in
+  `units.js`) is applied under the board's yaw, leaving idle, move and capture yaw as
+  they were. The Ivory Kingdom files stay in `public/models/` but are no longer
   loaded.
 - **Checked:** in the browser, all five clips load for each unit and props land on
   their hands at the planned sizes; no console errors; 132 tests, lint and build pass.
