@@ -9,7 +9,10 @@ export const DEFAULT_SETTINGS = Object.freeze({
   mode: 'human',
   difficulty: 'medium',
   playerColor: 'w',
+  battles: 'full',
 })
+
+export const SETTINGS_BATTLES = Object.freeze(['full', 'short', 'off'])
 
 export const SETTINGS_MODES = Object.freeze(['human', 'bot'])
 export const SETTINGS_DIFFICULTIES = Object.freeze([
@@ -22,11 +25,12 @@ export const SETTINGS_PLAYER_COLORS = Object.freeze(['w', 'b'])
 /**
  * Coerce a partial/unknown payload into a safe settings object.
  * @param {unknown} raw
- * @returns {{ mode: string, difficulty: string, playerColor: string }}
+ * @param {boolean} reducedMotion
  */
-export function normalizeSettings(raw) {
+export function normalizeSettings(raw, reducedMotion = false) {
   const source =
     raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
+  const defaultBattles = reducedMotion ? 'off' : DEFAULT_SETTINGS.battles
 
   return {
     mode: SETTINGS_MODES.includes(source.mode)
@@ -38,19 +42,23 @@ export function normalizeSettings(raw) {
     playerColor: SETTINGS_PLAYER_COLORS.includes(source.playerColor)
       ? source.playerColor
       : DEFAULT_SETTINGS.playerColor,
+    battles: SETTINGS_BATTLES.includes(source.battles)
+      ? source.battles
+      : defaultBattles,
   }
 }
 
 /**
  * @param {Pick<Storage, 'getItem'> | null | undefined} storage
+ * @param {boolean} reducedMotion
  */
-export function readSettings(storage) {
+export function readSettings(storage, reducedMotion = false) {
   try {
     const raw = storage?.getItem?.(SETTINGS_STORAGE_KEY)
-    if (!raw) return { ...DEFAULT_SETTINGS }
-    return normalizeSettings(JSON.parse(raw))
+    if (!raw) return normalizeSettings({}, reducedMotion)
+    return normalizeSettings(JSON.parse(raw), reducedMotion)
   } catch {
-    return { ...DEFAULT_SETTINGS }
+    return normalizeSettings({}, reducedMotion)
   }
 }
 

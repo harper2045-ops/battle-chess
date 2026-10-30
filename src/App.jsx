@@ -67,7 +67,10 @@ const depthMap = {
 export default function App() {
   const settingsStorage = useMemo(() => defaultSettingsStorage(), [])
   const initialSettings = useMemo(
-    () => readSettings(settingsStorage),
+    () => readSettings(
+      settingsStorage,
+      globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+    ),
     [settingsStorage],
   )
   const chess = useMemo(() => new Chess(), [])
@@ -83,6 +86,7 @@ export default function App() {
   const battleId = useRef(0)
   const [, refresh] = useState(0)
   const [difficulty, setDifficulty] = useState(initialSettings.difficulty)
+  const [battleMode, setBattleMode] = useState(initialSettings.battles)
   const [selected, setSelected] = useState(null)
   const [legalMoves, setLegalMoves] = useState([])
   const [mode, setMode] = useState(initialSettings.mode)
@@ -123,10 +127,11 @@ export default function App() {
         mode: modeRef.current,
         difficulty,
         playerColor: playerColorRef.current,
+        battles: battleMode,
         ...patch,
       })
     },
-    [difficulty, settingsStorage],
+    [battleMode, difficulty, settingsStorage],
   )
 
   const invalidateBotMove = useCallback(() => {
@@ -665,6 +670,23 @@ export default function App() {
         selected={timeControl}
       />
 
+      <fieldset className="time-controls battle-settings">
+        <legend>Battles</legend>
+        {['full', 'short', 'off'].map((value) => (
+          <button
+            type="button"
+            key={value}
+            aria-pressed={battleMode === value}
+            onClick={() => {
+              setBattleMode(value)
+              persistSettings({ battles: value })
+            }}
+          >
+            {value[0].toUpperCase() + value.slice(1)}
+          </button>
+        ))}
+      </fieldset>
+
       <div className="export-controls" aria-label="Export game">
         <button disabled={!history.length} onClick={copyGamePgn}>
           Copy PGN
@@ -720,6 +742,7 @@ export default function App() {
         onSquareClick={handleClick}
         onCaptureComplete={completeCapture}
         onMoveComplete={completeMove}
+        battleMode={battleMode}
       />
 
       <CapturedPieces captured={captured} orientation={orientation} />

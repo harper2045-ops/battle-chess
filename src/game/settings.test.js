@@ -33,12 +33,14 @@ describe('normalizeSettings', () => {
         mode: 'bot',
         difficulty: 'hard',
         playerColor: 'b',
+        battles: 'short',
         extra: true,
       }),
     ).toEqual({
       mode: 'bot',
       difficulty: 'hard',
       playerColor: 'b',
+      battles: 'short',
     })
 
     expect(
@@ -63,15 +65,25 @@ describe('settings persistence', () => {
       mode: 'bot',
       difficulty: 'easy',
       playerColor: 'b',
+      battles: 'off',
     })
 
     expect(saved).toEqual({
       mode: 'bot',
       difficulty: 'easy',
       playerColor: 'b',
+      battles: 'off',
     })
     expect(JSON.parse(storage.getItem(SETTINGS_STORAGE_KEY))).toEqual(saved)
     expect(readSettings(storage)).toEqual(saved)
+  })
+
+  it('defaults reduced-motion users to Off but preserves an explicit choice', () => {
+    expect(readSettings(memoryStorage(), true).battles).toBe('off')
+
+    const storage = memoryStorage()
+    writeSettings(storage, { ...DEFAULT_SETTINGS, battles: 'full' })
+    expect(readSettings(storage, true).battles).toBe('full')
   })
 
   it('ignores corrupt JSON and storage errors', () => {
