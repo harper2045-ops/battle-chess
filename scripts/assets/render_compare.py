@@ -5,6 +5,7 @@ Each row is one model (front, three-quarter, side, back), labelled with its name
         OUT.png "Label A=/path/a.glb" "Label B=/path/b.glb"
 """
 import math
+import os
 import sys
 from pathlib import Path
 
@@ -47,6 +48,8 @@ for label, glb in entries:
     else:
         bpy.ops.import_scene.gltf(filepath=glb)
     bpy.context.view_layer.update()  # imported parents' transforms aren't in matrix_world until this runs
+    if os.environ.get("RENDER_FRAME"):  # pose animated GLBs mid-move (frame number)
+        scene.frame_set(int(os.environ["RENDER_FRAME"]))
     meshes = [o for o in scene.objects if o.type == "MESH"]
     # Frame on the 0.5-99.5 percentile of vertices, so stray floater specks can't shrink the figure.
     pts = [o.matrix_world @ v.co for o in meshes for v in o.data.vertices]

@@ -7,7 +7,11 @@
    "rigged": "output/animate/w_p_s2_00001_40k__rig__20261029-213338/w_p_s2_00001_40k_rigged.glb",
    "animated": "output/animate/w_p_s2_00001_40k__rig__20261029-213338/w_p_s2_00001_40k_idle.glb"
   },
-  "seconds": 451
+  "seconds": 451,
+  "final": {
+   "rigged": "output/armies-final/w_p_rigged.glb",
+   "idle": "output/armies-final/w_p_idle.glb"
+  }
  },
  "w_n": {
   "asset_id": "4888f21d45ae",
@@ -17,7 +21,11 @@
    "rigged": "output/animate/w_n_s2_00001_40k__rig__20261029-214012/w_n_s2_00001_40k_rigged.glb",
    "animated": "output/animate/w_n_s2_00001_40k__rig__20261029-214012/w_n_s2_00001_40k_idle.glb"
   },
-  "seconds": 390
+  "seconds": 390,
+  "final": {
+   "rigged": "output/armies-final/w_n_rigged.glb",
+   "idle": "output/armies-final/w_n_idle.glb"
+  }
  },
  "w_b": {
   "asset_id": "26c48c9b9b27",
@@ -27,7 +35,11 @@
    "rigged": "output/animate/w_b_s1_00001_40k__rig__20261029-214813/w_b_s1_00001_40k_rigged.glb",
    "animated": "output/animate/w_b_s1_00001_40k__rig__20261029-214813/w_b_s1_00001_40k_idle.glb"
   },
-  "seconds": 484
+  "seconds": 484,
+  "final": {
+   "rigged": "output/armies-final/w_b_rigged.glb",
+   "idle": "output/armies-final/w_b_idle.glb"
+  }
  },
  "w_r": {
   "asset_id": "5e2e92eb3568",
@@ -37,7 +49,12 @@
    "rigged": "output/animate/w_r_s2_00001_40k__rig__20261029-220256/w_r_s2_00001_40k_rigged.glb",
    "animated": "output/animate/w_r_s2_00001_40k__rig__20261029-220256/w_r_s2_00001_40k_idle.glb"
   },
-  "seconds": 885
+  "seconds": 885,
+  "final": {
+   "rigged": "output/armies-final/w_r_rigged.glb",
+   "idle": "output/armies-final/w_r_idle.glb"
+  },
+  "rerigged": true
  },
  "w_q": {
   "asset_id": "b807061a93af",
@@ -47,7 +64,11 @@
    "rigged": "output/animate/w_q_s2_00001_40k__rig__20261029-221014/w_q_s2_00001_40k_rigged.glb",
    "animated": "output/animate/w_q_s2_00001_40k__rig__20261029-221014/w_q_s2_00001_40k_idle.glb"
   },
-  "seconds": 431
+  "seconds": 431,
+  "final": {
+   "rigged": "output/armies-final/w_q_rigged.glb",
+   "idle": "output/armies-final/w_q_idle.glb"
+  }
  },
  "w_k": {
   "asset_id": "fec448318ecb",
@@ -57,7 +78,12 @@
    "rigged": "output/animate/w_k_s2_00001_40k__rig__20261029-222358/w_k_s2_00001_40k_rigged.glb",
    "animated": "output/animate/w_k_s2_00001_40k__rig__20261029-222358/w_k_s2_00001_40k_idle.glb"
   },
-  "seconds": 843
+  "seconds": 843,
+  "final": {
+   "rigged": "output/armies-final/w_k_rigged.glb",
+   "idle": "output/armies-final/w_k_idle.glb"
+  },
+  "rerigged": true
  },
  "b_p": {
   "asset_id": "c21bc21534c3",
@@ -65,7 +91,11 @@
    "rigged": "output/animate/b_p__rig__20261029-223104/b_p_rigged.glb",
    "animated": "output/animate/b_p__rig__20261029-223104/b_p_idle.glb"
   },
-  "seconds": 442
+  "seconds": 442,
+  "final": {
+   "rigged": "output/armies-final/b_p_rigged.glb",
+   "idle": "output/armies-final/b_p_idle.glb"
+  }
  },
  "b_n": {
   "asset_id": "d12e1c214e8d",
@@ -73,7 +103,11 @@
    "rigged": "output/animate/b_n__rig__20261029-223822/b_n_rigged.glb",
    "animated": "output/animate/b_n__rig__20261029-223822/b_n_idle.glb"
   },
-  "seconds": 427
+  "seconds": 427,
+  "final": {
+   "rigged": "output/armies-final/b_n_rigged.glb",
+   "idle": "output/armies-final/b_n_idle.glb"
+  }
  },
  "b_b": {
   "asset_id": "43cc58637873",
@@ -81,6 +115,46 @@
    "rigged": "output/animate/b_b__rig__20261029-224436/b_b_rigged.glb",
    "animated": "output/animate/b_b__rig__20261029-224436/b_b_idle.glb"
   },
-  "seconds": 388
+  "seconds": 388,
+  "final": {
+   "rigged": "output/armies-final/b_b_rigged.glb",
+   "idle": "output/armies-final/b_b_idle.glb"
+  }
+ },
+ "b_r": {
+  "asset_id": "3a2ad180a24b",
+  "made": {
+   "rigged": "output/animate/b_r__rig__20261029-233140/b_r_rigged.glb"
+  },
+  "seconds": 383,
+  "final": {
+   "rigged": "output/armies-final/b_r_rigged.glb",
+   "idle": "output/armies-final/b_r_idle.glb"
+  },
+  "rerigged": true
+ },
+ "b_q": {
+  "asset_id": "fc0599110db4",
+  "made": {
+   "rigged": "output/animate/b_q__rig__20261029-233835/b_q_rigged.glb",
+   "animated": "output/animate/b_q__rig__20261029-233835/b_q_idle.glb"
+  },
+  "seconds": 423,
+  "final": {
+   "rigged": "output/armies-final/b_q_rigged.glb",
+   "idle": "output/armies-final/b_q_idle.glb"
+  }
+ },
+ "b_k": {
+  "asset_id": "1c8d1216aed5",
+  "made": {
+   "rigged": "output/animate/b_k__rig__20261029-234529/b_k_rigged.glb"
+  },
+  "seconds": 412,
+  "final": {
+   "rigged": "output/armies-final/b_k_rigged.glb",
+   "idle": "output/armies-final/b_k_idle.glb"
+  },
+  "rerigged": true
  }
 }
