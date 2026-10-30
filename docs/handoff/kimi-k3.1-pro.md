@@ -65,9 +65,13 @@ design doc.
    - the defender always ends dead
    - en passant and promotion captures work
    - the same seed gives the same script
-2. `src/battle/units.js`: unit manifest (data). Point it at the existing Ivory
-   Kingdom files in `public/models/kings-gambit-ivory/` for now. Make
-   `FantasyPiece.jsx` read paths and clip names from it.
+2. ~~`src/battle/units.js`~~ **Done by Claude (2026-10-30).** `units.js` is the
+   unit manifest: one GLB per unit in `public/models/armies/` with clips `idle`,
+   `attack`, `hit`, `death`, `walk`, plus weapon/shield props attached to hand bones
+   at load (`src/battle/propAttach.js`, data in `src/battle/loadout.json`).
+   `FantasyPiece.jsx` already reads from it. In the theater, use the same loader;
+   to drop a weapon, find the prop by name under the actor (e.g. `w_spear`) and
+   hide it.
 3. `src/components/BattleTheater.jsx`: plays a `BattleScript` inside the existing
    `<Canvas>`:
    - Show a simple arena: floor plane, dim fog, one key light and one rim light.
@@ -122,7 +126,7 @@ may not exist yet: missing files must fail silently, so log once and keep playin
 ## Not your job (skip these)
 
 Generating 3D models, rigging, music, voices or SFX. Those run on local models and
-are being done separately. Use the existing Ivory Kingdom models and silence.
+are being done separately. Use the generated armies in `public/models/armies/` (via `src/battle/units.js`) and silence.
 
 ## If you get stuck
 

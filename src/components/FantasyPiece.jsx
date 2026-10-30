@@ -4,8 +4,8 @@ import { useGLTF } from '@react-three/drei'
 import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat } from 'three'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
 import { normalizeIvoryActor } from './ivoryNormalize.js'
-
-const PIECE_TYPES = ['k', 'q', 'b', 'n', 'r', 'p']
+import { DRACO_PATH, PROP_URLS, UNITS, unitFor } from '../battle/units.js'
+import { attachProps } from '../battle/propAttach.js'
 
 /** ChessBoard3D square top sits at y ≈ 0.04 (mesh at -0.02, height 0.12). */
 const BOARD_SURFACE_Y = 0.04
@@ -21,54 +21,25 @@ const teamColor = {
   b: '#5978b8',
 }
 
-function assetPath(type, file) {
-  return `/models/kings-gambit-ivory/${type}/${file}.glb`
-}
-
-/** Pull the first clip from an anim-only GLB and rename it for the mixer. */
-function renameClip(gltf, name) {
-  const source = gltf?.animations?.[0]
-  if (!source) return null
-  const clip = source.clone()
-  clip.name = name
-  return clip
-}
-
 /**
- * King's Gambit ships a rigged mesh GLB plus separate anim GLBs (one clip each).
- * Load the mesh from rigged.glb, then merge renamed clips from idle/attack/death/walk.
- * There is no dedicated hit take — reuse a short slice of idle (death as fallback).
+ * One GLB per unit holds the mesh, skeleton and every clip (idle / attack / hit /
+ * death / walk); the weapon and shield props load separately and go on the hand
+ * bones (src/battle/units.js).
  */
-function useIvoryPiece(type) {
-  const rigged = useGLTF(assetPath(type, 'rigged'))
-  const idleGltf = useGLTF(assetPath(type, 'idle'))
-  const attackGltf = useGLTF(assetPath(type, 'attack'))
-  const deathGltf = useGLTF(assetPath(type, 'death'))
-  const walkGltf = useGLTF(assetPath(type, 'walk'))
-
-  const animations = useMemo(() => {
-    const idle = renameClip(idleGltf, 'idle')
-    const attack = renameClip(attackGltf, 'attack')
-    const death = renameClip(deathGltf, 'death')
-    const walk = renameClip(walkGltf, 'walk')
-
-    let hit = null
-    const hitSource = idle ?? death
-    if (hitSource) {
-      hit = hitSource.clone()
-      hit.name = 'hit'
-      // Short flinch for capture mid-beat (see getCaptureActions).
-      hit.duration = Math.min(0.4, hit.duration)
-    }
-
-    return [idle, attack, death, hit, walk].filter(Boolean)
-  }, [idleGltf, attackGltf, deathGltf, walkGltf])
-
-  return { scene: rigged.scene, animations }
+function useUnit(piece) {
+  const unit = unitFor(piece)
+  const gltf = useGLTF(unit.model, DRACO_PATH)
+  // Every prop in one call: the hook count stays fixed when a pawn promotes.
+  const propGltfs = useGLTF(PROP_URLS, DRACO_PATH)
+  const propScenes = useMemo(
+    () => Object.fromEntries(PROP_URLS.map((url, i) => [url, propGltfs[i].scene])),
+    [propGltfs],
+  )
+  return { scene: gltf.scene, animations: gltf.animations, props: unit.props, propScenes }
 }
 
 export function FantasyPiece({ piece, selected = false, action = 'idle', yaw }) {
-  const { scene, animations } = useIvoryPiece(piece.type)
+  const { scene, animations, props, propScenes } = useUnit(piece)
   const { camera } = useThree()
   const lodTick = useRef(0)
 
@@ -90,9 +61,11 @@ export function FantasyPiece({ piece, selected = false, action = 'idle', yaw }) 
       }
     })
 
+    // Size the body first, so a tall spear doesn't shrink the unit holding it.
     const { height } = normalizeIvoryActor(instance, piece.type)
+    attachProps(instance, props, propScenes)
     return { actor: instance, crownY: height + 0.08 }
-  }, [scene, piece.type])
+  }, [scene, piece.type, props, propScenes])
 
   const mixer = useMemo(() => new AnimationMixer(actor), [actor])
 
@@ -165,9 +138,6 @@ export function FantasyPiece({ piece, selected = false, action = 'idle', yaw }) 
   )
 }
 
-// Preload all six rigged meshes and their clip GLBs.
-PIECE_TYPES.forEach((type) => {
-  ;['rigged', 'idle', 'attack', 'death', 'walk'].forEach((file) => {
-    useGLTF.preload(assetPath(type, file))
-  })
-})
+// Preload every unit and prop, so the first capture doesn't stall on a download.
+Object.values(UNITS).forEach((unit) => useGLTF.preload(unit.model, DRACO_PATH))
+useGLTF.preload(PROP_URLS, DRACO_PATH)

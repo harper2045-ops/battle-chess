@@ -338,8 +338,7 @@ are in `scripts/assets/armies.json`.
   is stringy, the black pawn's tabard has two small dark holes, and the white queen leans
   a little in her idle. None of these matter at board scale; revisit for close-up battle
   shots.
-- Next: compress for the web (gltfpack / texture compression; currently about 120 MB for
-  12 idle GLBs). Weapons are done (below).
+- Compression and game loading are done (see "Into the game" below), as are weapons.
 
 #### Weapons and shields (2026-10-30)
 
@@ -381,6 +380,35 @@ The user chose weapons before compression. Loadout (decided here; flag if wrong)
   pose. In three.js: `offset = inverse(bone bind world) × matrix`, then `bone.add(prop)`.
   The battle theater can drop or swap props per beat.
 - Lineups: `docs/design/army-white-armed.png`, `docs/design/army-black-armed.png`.
+
+#### Into the game (2026-10-30)
+
+- **Moves:** `scripts/assets/make_moves.py` gives every unit the clips the board's
+  captures play, through AssetFurnace's retarget (3 s for all four moves of a unit):
+  `attack` = sword swing at 1.3× (golems: punch combo at 1.2×), `hit` = hit react,
+  `death`, `walk`. Idle came from the build.
+- **One file per unit:** `scripts/assets/pack_units.py` (Blender) packs the mesh,
+  skeleton and the five clips into `public/models/armies/<unit>.glb`, with textures
+  shrunk to 1024 px WebP and Draco mesh compression. `pack_props.py` cuts each prop to
+  6k triangles with 512 px textures into `public/models/armies/props/`. **All 12 units
+  with five moves plus 14 props: 23 MB** (was about 120 MB for the idle files alone).
+  Meshes stay at about 40k triangles for the close-up battle shots.
+- Compression runs in Blender, not glTF Transform: running `npx @gltf-transform/cli`
+  was refused by the agent's permission check (it downloads and runs outside code).
+  Draco's decoder is three.js's own, copied to `public/draco/` so nothing loads from a
+  CDN.
+- **Game code:** `src/battle/units.js` is the unit manifest (model per colour and type,
+  props from `src/battle/loadout.json`). `src/battle/propAttach.js` puts each prop
+  under its hand bone: offset = inverse(bindMatrix × inverse(boneInverse)) × placement.
+  `FantasyPiece.jsx` loads the unit GLB and all props in one call each (so a promoting
+  pawn doesn't change the hook count), sizes the body with the existing
+  `TARGET_HEIGHT`s, then attaches props. Old and new models both face +Z, so facing
+  code is unchanged. The Ivory Kingdom files stay in `public/models/` but are no longer
+  loaded.
+- **Checked:** in the browser, all five clips load for each unit and props land on
+  their hands at the planned sizes; no console errors; 132 tests, lint and build pass.
+  **Not checked:** the 60 fps target (the Browser pane throttles a page that isn't
+  being watched) and how captures look with the new moves.
 
 **Decision (user, 2026-10-29): split the armies.**
 
