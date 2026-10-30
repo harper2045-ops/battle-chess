@@ -4,8 +4,9 @@ import { useGLTF } from '@react-three/drei'
 import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat } from 'three'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
 import { normalizeIvoryActor } from './ivoryNormalize.js'
-import { DRACO_PATH, MODEL_TURN, PROP_URLS, UNITS, unitFor } from '../battle/units.js'
+import { DRACO_PATH, MODEL_TURN, PROP_URLS, UNITS } from '../battle/units.js'
 import { attachProps } from '../battle/propAttach.js'
+import { useUnit } from '../battle/useUnit.js'
 
 /** ChessBoard3D square top sits at y ≈ 0.04 (mesh at -0.02, height 0.12). */
 const BOARD_SURFACE_Y = 0.04
@@ -19,23 +20,6 @@ const IDLE_LOD_DISTANCE = 11
 const teamColor = {
   w: '#f2ddad',
   b: '#5978b8',
-}
-
-/**
- * One GLB per unit holds the mesh, skeleton and every clip (idle / attack / hit /
- * death / walk); the weapon and shield props load separately and go on the hand
- * bones (src/battle/units.js).
- */
-function useUnit(piece) {
-  const unit = unitFor(piece)
-  const gltf = useGLTF(unit.model, DRACO_PATH)
-  // Every prop in one call: the hook count stays fixed when a pawn promotes.
-  const propGltfs = useGLTF(PROP_URLS, DRACO_PATH)
-  const propScenes = useMemo(
-    () => Object.fromEntries(PROP_URLS.map((url, i) => [url, propGltfs[i].scene])),
-    [propGltfs],
-  )
-  return { scene: gltf.scene, animations: gltf.animations, props: unit.props, propScenes }
 }
 
 export function FantasyPiece({ piece, selected = false, action = 'idle', yaw }) {

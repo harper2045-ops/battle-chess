@@ -1004,3 +1004,49 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+.theater-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: white;
+  cursor: pointer;
+  user-select: none;
+}
+
+.theater-overlay:focus-visible {
+  outline: 2px solid #ffd45a;
+  outline-offset: -4px;
+}
+
+.theater-letterbox {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  height: clamp(28px, 8vh, 80px);
+  background: black;
+  pointer-events: none;
+}
+
+.theater-letterbox--top { top: 0; }
+.theater-letterbox--bottom { bottom: 0; }
+
+.theater-skip {
+  position: absolute;
+  z-index: 3;
+  right: 18px;
+  bottom: 14px;
+  color: rgb(255 255 255 / 62%);
+  font: 500 12px/1 system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.theater-fade {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  background: black;
+  pointer-events: none;
+}
