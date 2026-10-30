@@ -1,0 +1,58 @@
+{
+ "w_spear": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/w_spear/w_spear.glb",
+  "seconds": 271
+ },
+ "b_spear": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/b_spear/b_spear.glb",
+  "seconds": 274
+ },
+ "w_round_shield": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/w_round_shield/w_round_shield.glb",
+  "seconds": 285
+ },
+ "b_round_shield": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/b_round_shield/b_round_shield.glb",
+  "seconds": 310
+ },
+ "w_kite_shield": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/w_kite_shield/w_kite_shield.glb",
+  "seconds": 330
+ },
+ "b_kite_shield": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/b_kite_shield/b_kite_shield.glb",
+  "seconds": 307
+ },
+ "w_longsword": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/w_longsword/w_longsword.glb",
+  "seconds": 300
+ },
+ "b_longsword": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/b_longsword/b_longsword.glb",
+  "seconds": 282
+ },
+ "w_mace": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/w_mace/w_mace.glb",
+  "seconds": 273
+ },
+ "b_mace": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/b_mace/b_mace.glb",
+  "seconds": 357
+ },
+ "w_staff": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/w_staff/w_staff.glb",
+  "seconds": 292
+ },
+ "b_staff": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/b_staff/b_staff.glb",
+  "seconds": 359
+ },
+ "w_greatsword": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/w_greatsword/w_greatsword.glb",
+  "seconds": 283
+ },
+ "b_greatsword": {
+  "glb": "/Users/josephjharper/hunyuan3d-2.1-mac/outputs/props/b_greatsword/b_greatsword.glb",
+  "seconds": 313
+ }
+}

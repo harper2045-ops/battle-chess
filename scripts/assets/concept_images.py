@@ -62,6 +62,41 @@ for army, look in ARMY.items():
     for role, text in ROLES.items():
         UNITS[f"{army}_{role}"] = f"{text.format(**look)} {EMPTY_HANDS}"
 
+# Weapon and shield props, one set per army, attached to the hand bones in the game.
+PROP_STYLE = (
+    "A single game prop, alone and complete, standing upright and centred with empty space "
+    "around it, nothing else in the picture, no hands, no stand, plain flat light grey "
+    "background, even soft studio lighting, no shadows on the ground, no text. Stylised "
+    "medieval fantasy, chunky readable shapes like a premium tabletop miniature, "
+    "hand-painted textures, clean shapes."
+)
+PROP_ARMY = {
+    "w": {"steel": "polished silver steel", "trim": "gold", "cloth": "royal blue",
+          "emblem": "a gold lion", "glow": "glowing pale blue"},
+    "b": {"steel": "blackened dark steel", "trim": "bronze", "cloth": "deep crimson",
+          "emblem": "a bronze dragon", "glow": "glowing deep red"},
+}
+PROP_ROLES = {
+    "spear": "A long infantry spear, straight and vertical: a thick straight wooden shaft with "
+             "{cloth} leather wrapped at the grip, a broad leaf-shaped {steel} spearhead with "
+             "{trim} fittings at the top, a short {trim} butt cap at the bottom.",
+    "round_shield": "A round infantry shield seen at a slight three-quarter angle so its thickness "
+                    "shows: {cloth} painted wood, a {steel} rim and a domed {trim} boss in the centre.",
+    "kite_shield": "A knight's kite shield seen at a slight three-quarter angle so its thickness shows: "
+                   "{cloth} face with {emblem} emblem, a thick {steel} rim with {trim} trim.",
+    "longsword": "A knight's longsword pointing straight up: a wide straight {steel} blade, a {trim} "
+                 "crossguard, a {cloth} leather grip and a round {trim} pommel.",
+    "mace": "A warrior priest's flanged mace pointing straight up: a heavy {steel} head with "
+            "six thick flanges, {trim} bands, a sturdy {cloth} wrapped handle.",
+    "staff": "A sorceress queen's tall staff, straight and vertical: a thick sturdy {trim} shaft, "
+             "as wide as a broom handle, with {steel} rings, topped by {trim} claws holding a large {glow} crystal orb.",
+    "greatsword": "A king's ornate greatsword pointing straight up: a long broad {steel} blade, a wide "
+                  "{trim} crossguard set with jewels, a {cloth} grip and a jewelled {trim} pommel.",
+}
+PROPS = {f"{army}_{name}": text.format(**look)
+         for army, look in PROP_ARMY.items() for name, text in PROP_ROLES.items()}
+UNITS.update(PROPS)
+
 
 def post(path, body):
     req = urllib.request.Request(API + path, json.dumps(body).encode(), {"Content-Type": "application/json"})
@@ -105,7 +140,7 @@ def main():
     parser.add_argument("unit", choices=sorted(UNITS))
     parser.add_argument("--seeds", default="1,2,3,4")
     args = parser.parse_args()
-    prompt = f"{UNITS[args.unit]} {STYLE}"
+    prompt = f"{UNITS[args.unit]} {PROP_STYLE if args.unit in PROPS else STYLE}"
     for seed in [int(s) for s in args.seeds.split(",")]:
         started = time.time()
         files = run(graph(prompt, f"battle-chess/{args.unit}_s{seed}", seed))

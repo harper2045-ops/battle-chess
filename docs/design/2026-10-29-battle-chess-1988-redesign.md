@@ -339,7 +339,48 @@ are in `scripts/assets/armies.json`.
   a little in her idle. None of these matter at board scale; revisit for close-up battle
   shots.
 - Next: compress for the web (gltfpack / texture compression; currently about 120 MB for
-  12 idle GLBs), then attach separate weapon and shield props to the hand bones.
+  12 idle GLBs). Weapons are done (below).
+
+#### Weapons and shields (2026-10-30)
+
+The user chose weapons before compression. Loadout (decided here; flag if wrong):
+
+| Unit | Right hand | Left hand |
+|---|---|---|
+| Pawn | spear | round shield |
+| Knight | longsword | kite shield (white: gold lion, black: bronze dragon) |
+| Bishop | flanged mace | — |
+| Rook golem | none: it fights with its stone fists | — |
+| Queen | crystal staff (white: pale blue orb, black: red orb) | — |
+| King | jewelled greatsword | — |
+
+- Pictures: `concept_images.py w_spear` etc. (`PROP_ROLES` × `PROP_ARMY`), with a prop
+  style of "a single game prop, alone, upright, plain background".
+- **3D: Hunyuan3D 2.1 at 8 × 768 for both armies** (`scripts/assets/build_props.py`, about
+  5 min a prop, 1024² texture). Pixal3D was tried first: the spear looked right from the
+  front but from the side its head flared into a hatchet blade with a ghost second shaft.
+  Thin objects need depth that one picture doesn't give, and Hunyuan guessed it right.
+- Two rebuilds: the first white staff lost its thin pale shaft (the prompt now asks for a
+  thick gold shaft; seed 3). The white longsword came out lying along the view direction
+  twice (seeds 1 and 2), and the new staff leaned 30°. So the attach step now **stands
+  every long prop upright itself**: long axis vertical, wide end (crossguard, mace head,
+  orb, spearhead) up, flat side to the front. Any later tilted build is fixed the same way.
+  The white longsword's blade is thin; it may be worth a sturdier rebuild for close-ups.
+- Hands: `scripts/assets/hand_bones.py` uses AssetFurnace's own body mapper to find each
+  rig's hand bones (SkinTokens names them `bone_N`) → `scripts/assets/hands.json`.
+- Attaching: `scripts/assets/attach_props.py` (Blender). Each prop is scaled to the unit's
+  height (white units are 0.89 tall in their files, black ones 2.0), held at its grip
+  point at the palm **on the idle's first frame** (not the rest pose: the white queen's
+  idle turns her hand 36° from rest, which tilted her staff across her body), faced to the
+  unit's front, and parented to the hand bone. Shields and the kings' greatswords sit a little in front of the palm (the swords
+  were hidden inside the royal cloaks). The palm ignores far-off child bones: the black
+  king's hand carries a long extra bone that pulled it down his leg.
+- Output: armed preview copies `armies-final/armed/<unit>_armed_idle.glb`, and
+  **`scripts/assets/loadout.json` for the game**: per unit, the prop, the hand bone and a
+  matrix (glTF axes, column-major) placing the loaded prop scene in model space at the bind
+  pose. In three.js: `offset = inverse(bone bind world) × matrix`, then `bone.add(prop)`.
+  The battle theater can drop or swap props per beat.
+- Lineups: `docs/design/army-white-armed.png`, `docs/design/army-black-armed.png`.
 
 **Decision (user, 2026-10-29): split the armies.**
 
