@@ -258,6 +258,29 @@ dark steel, and a crisper shield. It's a style choice more than a quality gap no
 Per unit, Pixal3D takes about 4 minutes and Hunyuan 768 about 13 minutes (shape 2 min,
 paint 11 min).
 
+#### Faster Hunyuan attention through MLX (benchmarked, not built)
+
+Apple's MLX has a fused, memory-efficient attention kernel
+(`mx.fast.scaled_dot_product_attention`), the Mac counterpart of NVIDIA's flash
+attention. Benchmark: one attention call with 12 heads × 64 dims, fp16, on the M5 Max.
+
+| Size | Our plain sliced attention (PyTorch) | MLX fused | Copying torch ↔ numpy |
+|---|---|---|---|
+| 6 × 512 (24,576 tokens) | 0.20 s | 0.03 s | ~0 s |
+| 8 × 768 (73,728 tokens) | 2.20 s | 0.30 s (**7.3× faster**) | 0.01 s |
+
+MLX's output matches PyTorch's to within 6e-5. Routing the paint UNet's attention through
+MLX (an `F.scaled_dot_product_attention` replacement that hands q/k/v to MLX and back)
+should cut the 8 × 768 paint well below its current 10 min 45 s. How much depends on how
+much of the run is attention, which hasn't been measured. It needs `pip install mlx` in
+`~/hunyuan3d-2.1-mac/venv`.
+
+#### Army split idea
+
+The user likes the idea of **Pixal3D for the white (ivory) army and Hunyuan 768 for the
+black army**. Hunyuan's darker, more metallic look suits an obsidian/steel side. Not
+decided yet.
+
 **Decision (pending the user's final call): Pixal3D for all units**, because it matches
 the art direction and is already wired into AssetFurnace's rig and moves. Hunyuan 512
 stays installed as the alternative. AssetFurnace can rig any GLB (`create` with
