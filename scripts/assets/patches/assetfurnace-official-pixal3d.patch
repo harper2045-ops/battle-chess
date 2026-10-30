@@ -1,0 +1,49 @@
+diff --git a/scripts/pixal3d_generate.py b/scripts/pixal3d_generate.py
+index b373f7f..7cbfaa7 100755
+--- a/scripts/pixal3d_generate.py
++++ b/scripts/pixal3d_generate.py
+@@ -311,6 +311,7 @@ def build_command(
+         "--res", str(res),
+         "--pixal3d-weights", "sv",
+         "--gss", str(gss),
++        "--tex-res", "1024",  # battle-chess: official res-1024 texture flow, not auto's 512 volume
+     ]
+     if gsh is not None:
+         command += ["--gsh", str(gsh)]
+@@ -508,7 +509,7 @@ def main() -> int:
+     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+     parser.add_argument("image", type=Path)
+     parser.add_argument("output", type=Path)
+-    parser.add_argument("--res", type=int, choices=(1024,), default=1024)  # --sv-image is 1024-only
++    parser.add_argument("--res", type=int, choices=(1024, 1536), default=1536)  # battle-chess patch
+     parser.add_argument("--seed", type=int, default=42)
+     parser.add_argument(
+         "--fov", type=float, default=DEFAULT_FOV,
+diff --git a/viewer/generate_api.py b/viewer/generate_api.py
+index 731ecd5..ea9b8a2 100755
+--- a/viewer/generate_api.py
++++ b/viewer/generate_api.py
+@@ -1990,17 +1990,19 @@ def _hunyuan_xiong_readiness() -> dict[str, Any]:
+ 
+ 
+ PIXAL3D_DEFAULT_SETTINGS: dict[str, Any] = {
+-    "res": 1024,
++    # battle-chess: Pixal3D's official defaults (inference.py: 1536_cascade, 12 steps per
++    # flow). Needs the trellis_args.cpp patch that lets --sv-image take 1536.
++    "res": 1536,
+     "seed": 42,
+     "fov": 0.3490658503988659,
+     # "auto": the wrapper runs 8 on a patched trellis-cli and 12 otherwise, so an install
+     # without scripts/patch_pixal3d_steps.py keeps working. 12 forces the full count.
+-    "steps": "auto",
++    "steps": 12,
+ }
+ PIXAL3D_STEP_CHOICES = {"auto", 12}
+-# trellis-cli --sv-image refuses anything but 1024 ("supports --res 1024 only in this
++# Stock trellis-cli --sv-image refuses anything but 1024 ("supports --res 1024 only in this
+ # release"), and the single-view weights ship no res-512 texture flow.
+-PIXAL3D_VALID_RES = {1024}
++PIXAL3D_VALID_RES = {1024, 1536}
+ PIXAL3D_STAGES = ["views", "ss", "shape", "decode", "texture", "write"]
+ PIXAL3D_STAGE_LABELS = {
+     "views": "Preparing view",

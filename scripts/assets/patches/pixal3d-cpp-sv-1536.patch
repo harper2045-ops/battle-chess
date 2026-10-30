@@ -1,0 +1,15 @@
+diff --git a/src/trellis_args.cpp b/src/trellis_args.cpp
+index e436af5..73bda84 100644
+--- a/src/trellis_args.cpp
++++ b/src/trellis_args.cpp
+@@ -223,7 +223,9 @@ bool parse_args(int argc, char** argv, TrellisParams& p) {
+             return false;
+         }
+         // D10: SV のリリース対応解像度は 1024 のみ。1536 は API/UI/CLI とも受けない。
+-        if (!p.cascade || p.hr_res != 1024) {
++        // battle-chess: allow 1536 too (Pixal3D's official default); D10 only fenced it off as
++        // untested. Same cascade code path the MV weights already run at 1536.
++        if (!p.cascade || (p.hr_res != 1024 && p.hr_res != 1536)) {
+             fprintf(stderr, "[trellis] --sv-image supports --res 1024 only in this release\n");
+             return false;
+         }

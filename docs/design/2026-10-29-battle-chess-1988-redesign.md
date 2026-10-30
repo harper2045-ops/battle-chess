@@ -291,6 +291,38 @@ much of the run is attention, which hasn't been measured. It needs `pip install 
 
 #### Army split idea
 
+#### Pixal3D at its official settings (2026-10-29)
+
+AssetFurnace ran Pixal3D below the official `TencentARC/Pixal3D` `inference.py` defaults:
+**8 sampling steps** (its "auto" fast mode) instead of 12, and **1024** instead of the
+official default **1536** cascade. Its texture flow also ran on "auto", which drops to a
+512 PBR volume. Same pawn and seed: 12 steps adds chainmail and crisper trim (about +10 s),
+and 1536 adds the finest detail (about 4¾ min instead of 2). Guidance stays at
+AssetFurnace's 10, not the official 7.5, because 7.5 drops thin parts.
+
+- pixal3d.cpp refused 1536 for single-view (`--sv-image`) only because it hadn't been
+  tested (its design note D10); multi-view already runs 1536 through the same cascade.
+  The one-line guard is lifted: `scripts/assets/patches/pixal3d-cpp-sv-1536.patch`.
+- AssetFurnace now defaults to res 1536, 12 steps and `--tex-res 1024`:
+  `scripts/assets/patches/assetfurnace-official-pixal3d.patch`. AssetFurnace's updater
+  refuses to run over local edits, so re-apply both patches after an update.
+- No MLX bridge is needed here: pixal3d.cpp already runs GGML's Metal flash-attention
+  kernel (`kernel_flash_attn_ext_bf16`) for its big flows.
+
+#### Building the 12 units (`scripts/assets/build_armies.py`)
+
+Concepts: `concept_images.py` with per-army looks and empty hands (`w_*` ivory/gold/blue,
+`b_*` dark steel/bronze/crimson). Picks are in `PICKS`. Results (AssetFurnace asset ids)
+are in `scripts/assets/armies.json`.
+
+- White army: about 6½–8 min per unit (39k triangles, 34 bones, 2048 textures).
+- **Rook golem rig failed:** the model is excellent, but SkinTokens fitted 43 bones and the
+  idle folds it up, with its arms through its legs. Retry the rig only.
+- **King:** good overall, but the cloak edge near the right elbow stretches into a spike
+  (skin weights). Fix with the golem.
+- Paused after the black pawn (user updating the Mac). Resume with
+  `--only b_n,b_b,b_r,b_q,b_k`.
+
 **Decision (user, 2026-10-29): split the armies.**
 
 - **White / ivory army: Pixal3D** (about 4 min per unit, including the rig and a move).

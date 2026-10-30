@@ -28,6 +28,38 @@ UNITS = {
             "right hand and a small round shield on his left arm.",
 }
 
+# Units are made empty-handed: held weapons get skinned to the body and bend when the
+# rig moves, so weapons and shields are separate props attached to the hand bones.
+EMPTY_HANDS = ("Both hands are open and empty, holding nothing: no weapon, no shield, no staff, "
+               "nothing on the back.")
+
+# One look per army: white = ivory plate, gold trim, royal blue cloth (Pixal3D);
+# black = blackened dark steel, bronze trim, deep crimson cloth (Hunyuan3D 2.1).
+ARMY = {
+    "w": {"metal": "polished ivory-white plate armour with gold trim", "cloth": "royal blue",
+          "stone": "pale cream marble with gold inlay"},
+    "b": {"metal": "blackened dark steel plate armour with bronze trim", "cloth": "deep crimson",
+          "stone": "dark charcoal basalt with bronze inlay"},
+}
+
+ROLES = {
+    "p": "A sturdy young foot soldier in {metal} over a {cloth} tabard, open-faced kettle helmet, "
+         "leather belt and boots.",
+    "n": "A tall armoured knight in full {metal}, a closed great helm with a {cloth} plume, "
+         "a {cloth} surcoat, broad pauldrons and gauntlets.",
+    "b": "A battle bishop: a broad-shouldered warrior priest in a tall {cloth} mitre and long {cloth} "
+         "and white robes over {metal}, a gold chain with a holy symbol on his chest.",
+    "r": "A hulking stone golem built like a castle tower, carved from {stone}: battlement "
+         "crenellations on its shoulders and head, massive blocky arms and legs, small glowing eyes.",
+    "q": "A regal sorceress queen in a fitted {cloth} gown with {metal} bodice, shoulder guards "
+         "and bracers, a slim crown, long flowing hair, a floor-length cloak.",
+    "k": "An old bearded warrior king in {metal} under a heavy {cloth} royal cloak with fur "
+         "trim, a large jewelled crown, a broad belt.",
+}
+for army, look in ARMY.items():
+    for role, text in ROLES.items():
+        UNITS[f"{army}_{role}"] = f"{text.format(**look)} {EMPTY_HANDS}"
+
 
 def post(path, body):
     req = urllib.request.Request(API + path, json.dumps(body).encode(), {"Content-Type": "application/json"})
