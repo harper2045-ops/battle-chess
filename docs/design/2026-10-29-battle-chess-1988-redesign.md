@@ -410,8 +410,9 @@ The user chose weapons before compression. Loadout (decided here; flag if wrong)
   loaded.
 - **Checked:** in the browser, all five clips load for each unit and props land on
   their hands at the planned sizes; no console errors; 132 tests, lint and build pass.
-  **Not checked:** the 60 fps target (the Browser pane throttles a page that isn't
-  being watched) and how captures look with the new moves.
+  The user then played a capture in their own browser and confirmed it looks and runs
+  right (2026-10-30). No fps number has been measured yet (the Browser pane throttles
+  a page that isn't being watched).
 
 **Decision (user, 2026-10-29): split the armies.**
 
