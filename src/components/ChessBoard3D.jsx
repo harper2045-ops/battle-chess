@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import {
@@ -15,6 +15,10 @@ import {
   quietMoveDuration,
 } from '../battle/moveAnimation.js'
 import { FantasyPiece } from './FantasyPiece.jsx'
+import { BattleTheater } from './BattleTheater.jsx'
+import { planBattle } from '../battle/planBattle.js'
+import { unitKey } from '../battle/units.js'
+import { useUnit } from '../battle/useUnit.js'
 import {
   isLastMoveSquare,
   squareHighlightColor,
@@ -330,6 +334,31 @@ function QuietMoveActors({ event, onComplete, reducedMotion }) {
   )
 }
 
+function BattleCapture({ event, mode, onComplete }) {
+  const attackerPiece = useMemo(() => ({
+    ...event.attacker,
+    type: event.promotion ?? event.attacker.type,
+  }), [event])
+  const attacker = useUnit(attackerPiece)
+  const defender = useUnit(event.defender)
+  const complete = useCallback(() => onComplete(event.id), [event.id, onComplete])
+  const script = useMemo(() => {
+    const durations = (animations) => Object.fromEntries(
+      animations.map((clip) => [clip.name, clip.duration]),
+    )
+    return planBattle(event, {
+      mode,
+      seed: event.id,
+      clipDurations: {
+        [unitKey(attackerPiece)]: durations(attacker.animations),
+        [unitKey(event.defender)]: durations(defender.animations),
+      },
+    })
+  }, [event, mode, attackerPiece, attacker.animations, defender.animations])
+
+  return <BattleTheater script={script} onComplete={complete} />
+}
+
 function Scene({
   board,
   orientation,
@@ -344,6 +373,7 @@ function Scene({
   onMoveComplete,
   reducedMotion,
   coarsePointer,
+  battleMode,
 }) {
   const legal = useMemo(() => new Set(legalMoves), [legalMoves])
   const orbitTouches = useMemo(
@@ -351,6 +381,17 @@ function Scene({
     [coarsePointer],
   )
   const hitHeight = getSquareHitHeight(coarsePointer)
+
+  if (activeCapture && battleMode !== 'off' && !reducedMotion) {
+    return (
+      <BattleCapture
+        key={activeCapture.id}
+        event={activeCapture}
+        mode={battleMode}
+        onComplete={onCaptureComplete}
+      />
+    )
+  }
 
   return (
     <>
@@ -470,6 +511,7 @@ export function ChessBoard3D({
   onSquareClick,
   onCaptureComplete,
   onMoveComplete,
+  battleMode = 'full',
 }) {
   const reducedMotion = useReducedMotion()
   const coarsePointer = useCoarsePointer()
@@ -499,6 +541,7 @@ export function ChessBoard3D({
           onMoveComplete={onMoveComplete}
           reducedMotion={reducedMotion}
           coarsePointer={coarsePointer}
+          battleMode={battleMode}
         />
       </Canvas>
 
@@ -513,7 +556,7 @@ export function ChessBoard3D({
           <button
             key={square}
             type="button"
-            disabled={disabled}
+            disabled={disabled || Boolean(activeCapture || activeMove)}
             onClick={() => onSquareClick(square)}
             aria-label={`${square.toUpperCase()}${piece ? ` ${piece.color === 'w' ? 'White' : 'Black'} ${pieceNames[piece.type]}` : ' empty'}${isLastMoveSquare(lastMove, square) ? (square === lastMove.from ? ', last move from' : ', last move to') : ''}`}
           />
