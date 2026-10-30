@@ -11,7 +11,7 @@ same result exactly in query slices, so we allow it (HY3D_ALLOW_RISKY_TEXTURING)
 with plain sliced attention, chunks the feed-forward, and runs a memory watchdog.
 
     ~/hunyuan3d-2.1-mac/venv/bin/python scripts/assets/hunyuan21_generate.py IMAGE OUT_DIR \
-        --views 8 --res 768      # about 13 min on the M5 Max; 6 x 512 about 3 min
+        --views 8 --res 768      # about 6 min on the M5 Max with MLX attention; 6 x 512 about 3 min
 """
 import argparse
 import os
@@ -21,6 +21,7 @@ from pathlib import Path
 
 PORT = Path.home() / "hunyuan3d-2.1-mac"
 GIB = 1 << 30
+FUSED_HEAD_DIMS = (64, 80, 128)  # head dims MLX's fused attention kernel handles
 
 
 def start_watchdog(log_path, min_free_gib, max_swap_gib):
@@ -101,6 +102,70 @@ def use_plain_chunked_attention(budget_bytes):
     print(f"[attention] plain chunked attention, {budget_bytes / (1 << 30):.1f} GiB per slice", flush=True)
 
 
+def use_mlx_attention(fallback_budget_bytes):
+    """Run attention through Apple MLX's fused kernel, the Mac's flash attention.
+
+    `mx.fast.scaled_dot_product_attention` never builds the full score matrix, so it
+    needs no slicing, and at 8 x 768 it measured 7.3x faster than our plain sliced
+    attention (0.30 s vs 2.20 s per call) while matching it to within 6e-5. Torch and
+    MLX share unified memory, so the hand-over through numpy costs about 10 ms.
+    Anything MLX can't take (causal masks, dropout, bfloat16) goes to the plain path.
+
+    MLX's fused kernel needs query and value head dims to match and be 64, 80 or 128;
+    otherwise it silently builds the full score matrix (19.5 GiB for the paint UNet's
+    64-dim query / 128-dim value reference attention, which ran PyTorch out of memory).
+    So unsupported query dims go to the plain path, and a wider value is split into
+    query-width column blocks: every output column depends only on its own value
+    column, so running the blocks separately and concatenating is exact.
+    """
+    import math
+
+    import mlx.core as mx
+    import numpy as np
+    import torch
+    import torch.nn.functional as F
+
+    use_plain_chunked_attention(fallback_budget_bytes)
+    plain = F.scaled_dot_product_attention
+    mx.set_cache_limit(1 << 30)  # don't let MLX hoard freed buffers next to PyTorch's pool
+
+    def to_mx(t):
+        return mx.array(t.detach().contiguous().cpu().numpy())
+
+    def attention(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None, **_):
+        d_q, d_v = query.shape[-1], value.shape[-1]
+        if (is_causal or dropout_p or query.dtype not in (torch.float16, torch.float32) or query.dim() < 3
+                or d_q not in FUSED_HEAD_DIMS or d_v % d_q):
+            return plain(query, key, value, attn_mask, dropout_p, is_causal, scale=scale)
+        scale = scale if scale is not None else 1 / math.sqrt(query.shape[-1])
+        lead, len_q, len_k = query.shape[:-2], query.shape[-2], key.shape[-2]
+        # MLX wants (batch, heads, length, dim): fold every leading dim into heads.
+        q = to_mx(query.reshape(1, -1, len_q, query.shape[-1]))
+        k = to_mx(key.reshape(1, -1, len_k, key.shape[-1]))
+        v = to_mx(value.reshape(1, -1, len_k, value.shape[-1]))
+        mask = None
+        if attn_mask is not None:
+            m = attn_mask.expand(*lead, len_q, len_k).reshape(1, -1, len_q, len_k)
+            mask = to_mx(m) if m.dtype == torch.bool else to_mx(m.to(query.dtype))
+        blocks = [v[..., i:i + d_q] for i in range(0, d_v, d_q)]
+        out = mx.concatenate(
+            [mx.fast.scaled_dot_product_attention(q, k, b, scale=scale, mask=mask) for b in blocks], axis=-1)
+        mx.eval(out)
+        if os.environ.get("HY3D_MLX_DEBUG"):
+            print(f"[mlx] {q.dtype} q{tuple(q.shape)} k{tuple(k.shape)} v{tuple(v.shape)} "
+                  f"mask={None if mask is None else tuple(mask.shape)} "
+                  f"active={mx.get_active_memory() / GIB:.2f} cache={mx.get_cache_memory() / GIB:.2f} "
+                  f"peak={mx.get_peak_memory() / GIB:.2f} GiB", flush=True)
+        result = torch.from_numpy(np.array(out, copy=False)).to(query.device)
+        del q, k, v, blocks, out
+        mx.clear_cache()  # set_cache_limit alone let 19.5 GiB sit cached between calls
+        return result.reshape(*lead, len_q, d_v)
+
+    F.scaled_dot_product_attention = attention
+    torch.nn.functional.scaled_dot_product_attention = attention
+    print("[attention] MLX fused attention (plain sliced attention as fallback)", flush=True)
+
+
 def enable_ff_chunking(paint_pipeline, tokens):
     """Turn on the paint UNet's built-in chunked feed-forward, remainder-safe.
 
@@ -151,6 +216,9 @@ def main():
                              "At 8 x 768 the feed-forward, not attention, ran out of memory")
     parser.add_argument("--plain-attention", action="store_true",
                         help="replace MPS SDPA with plain sliced matmul/softmax (keeps memory in PyTorch's pool)")
+    parser.add_argument("--mlx-attention", action=argparse.BooleanOptionalAction, default=None,
+                        help="run attention through Apple MLX's fused kernel (default: on above 6 x 512 "
+                             "when mlx is installed)")
     parser.add_argument("--min-free-gib", type=float, default=6.0,
                         help="watchdog: kill this run if available memory drops below this")
     parser.add_argument("--max-swap-gib", type=float, default=6.0,
@@ -167,7 +235,11 @@ def main():
         args.plain_attention = True
         args.ff_chunk = args.ff_chunk or 4096
         args.budget_gib = min(args.budget_gib, 2.0)
-        print(f"[large paint] {args.views} x {args.res}: plain attention, ff-chunk {args.ff_chunk}, "
+        if args.mlx_attention is None:
+            import importlib.util
+            args.mlx_attention = importlib.util.find_spec("mlx") is not None
+        print(f"[large paint] {args.views} x {args.res}: "
+              f"{'MLX' if args.mlx_attention else 'plain'} attention, ff-chunk {args.ff_chunk}, "
               f"{args.budget_gib} GiB slices", flush=True)
 
     # Read by the port's patches when they load, so set before importing it.
@@ -207,7 +279,9 @@ def main():
 
     t1 = time.time()
     overrides = {"max_num_view": args.views, "resolution": args.res, "texture_size": args.texture}
-    if args.plain_attention:
+    if args.mlx_attention:
+        use_mlx_attention(int(args.budget_gib * GIB))
+    elif args.plain_attention:
         use_plain_chunked_attention(int(args.budget_gib * GIB))
     if args.ff_chunk:
         enable_ff_chunking(paint.load_pipeline(app.BACKEND, "low", overrides), args.ff_chunk)

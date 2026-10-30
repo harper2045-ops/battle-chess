@@ -258,7 +258,21 @@ dark steel, and a crisper shield. It's a style choice more than a quality gap no
 Per unit, Pixal3D takes about 4 minutes and Hunyuan 768 about 13 minutes (shape 2 min,
 paint 11 min).
 
-#### Faster Hunyuan attention through MLX (benchmarked, not built)
+#### Faster Hunyuan attention through MLX (built, 2026-10-29)
+
+**Result:** the 8 × 768 paint went from **10 min 45 s to 3 min 55 s (2.7× faster)**.
+The lowest free memory rose from 14.4 to 22.8 GiB, with no swap, and the render matches
+the plain run. `hunyuan21_generate.py` turns MLX on automatically above 6 × 512 when
+`mlx` is installed (it is now: `mlx==0.32.4` in `~/hunyuan3d-2.1-mac/venv`).
+
+Gotcha found on the way: MLX's fused kernel needs equal query/value head dims of 64, 80
+or 128, and otherwise *silently* builds the full score matrix. The paint UNet's
+reference attention has 64-dim queries and 128-dim values, which cost 19.5 GiB and ran
+PyTorch out of memory. The fix splits the value into 64-wide column blocks, which is
+exact. Unsupported query dims (the VAE's 512) go to plain sliced attention, and MLX's
+cache is cleared after every call.
+
+Original benchmark:
 
 Apple's MLX has a fused, memory-efficient attention kernel
 (`mx.fast.scaled_dot_product_attention`), the Mac counterpart of NVIDIA's flash
@@ -277,14 +291,17 @@ much of the run is attention, which hasn't been measured. It needs `pip install 
 
 #### Army split idea
 
-The user likes the idea of **Pixal3D for the white (ivory) army and Hunyuan 768 for the
-black army**. Hunyuan's darker, more metallic look suits an obsidian/steel side. Not
-decided yet.
+**Decision (user, 2026-10-29): split the armies.**
 
-**Decision (pending the user's final call): Pixal3D for all units**, because it matches
-the art direction and is already wired into AssetFurnace's rig and moves. Hunyuan 512
-stays installed as the alternative. AssetFurnace can rig any GLB (`create` with
-`model_path`), so either generator's output works with the same rig and animation steps.
+- **White / ivory army: Pixal3D** (about 4 min per unit, including the rig and a move).
+  It's closest to the painted ivory concept.
+- **Black army: Hunyuan3D 2.1 at 8 views × 768 px with MLX attention** (about 6 min per
+  unit: shape 2 min, paint 4 min). Its darker, real-metal look suits a steel/obsidian
+  side. Concept pictures for this army should ask for dark steel, not ivory.
+- Both armies go through the same AssetFurnace rig and moves (`create` with
+  `model_path` takes any GLB), so animations match across sides.
+- All units are generated empty-handed, with weapons and shields as separate props
+  (see "First test unit").
 5. **Arena sets** for cutaways: 1–3 small sets (castle courtyard, stone bridge,
    throne room for king deaths). Build in Blender from a few generated props, or a
    single generated panorama behind a simple floor. Not decided; keep it cheap.
