@@ -17,6 +17,14 @@ const SHOTS = {
   'fade-out': { position: [0, 2.6, 6.2], target: [0, 0.65, 0] },
 }
 
+/**
+ * drei's fullscreen Html centres itself on the projected world origin, which moves
+ * with the cinematic camera; pin it to the canvas centre so the letterbox stays put.
+ */
+function pinToCanvasCentre(_el, _camera, size) {
+  return [size.width / 2, size.height / 2]
+}
+
 function latestBeat(beats, elapsed, predicate, fallback) {
   return beats.filter((beat) => beat.t <= elapsed && predicate(beat)).at(-1) ?? fallback
 }
@@ -151,7 +159,7 @@ export function BattleTheater({ script, onComplete }) {
         position={[0.75, 0.04, 0]}
         facing={Math.PI / 2}
       />
-      <Html fullscreen zIndexRange={[30, 0]}>
+      <Html fullscreen zIndexRange={[30, 0]} calculatePosition={pinToCanvasCentre}>
         <div
           className="theater-overlay"
           role="button"
