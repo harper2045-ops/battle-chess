@@ -26,6 +26,10 @@ The component uses the real clips returned by `useUnit`: attacker `walk` → `at
 - Real unmount completion is deferred by one microtask. A synchronous remount cancels it, preventing React Strict Mode's setup/cleanup simulation from skipping battles.
 - Skip and natural completion are immediate; all later paths become no-ops after the first completion.
 - Arena geometry and lighting are deliberately cheap placeholders for K8.
+- (Claude, 2026-10-30) The fighters meet: the attacker walks in until it is
+  `script.strikeDistance` from the defender (per attacker type, `STRIKE_DISTANCE` in
+  `planBattle.js`, 0.5–0.65 squares), centred in the arena. Before this they stayed
+  1.5 squares apart and the defender died at range.
 - No sound playback is included; K3 owns the beat-sound manifest.
 
 ## Untested

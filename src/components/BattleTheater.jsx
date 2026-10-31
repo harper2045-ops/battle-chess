@@ -17,6 +17,9 @@ const SHOTS = {
   'fade-out': { position: [0, 2.6, 6.2], target: [0, 0.65, 0] },
 }
 
+/** How far the attacker walks in before reaching striking distance. */
+const APPROACH_LENGTH = 1.6
+
 /**
  * drei's fullscreen Html centres itself on the projected world origin, which moves
  * with the cinematic camera; pin it to the canvas centre so the letterbox stays put.
@@ -130,6 +133,11 @@ export function BattleTheater({ script, onComplete }) {
   ).shot
   const engageAt = script.beats.find((beat) => beat.actor === 'attacker' && beat.clip === 'attack')?.t ?? 1
   const engage = Math.min(1, elapsed / engageAt)
+  // The fighters meet at the arena centre: the attacker walks in until it is
+  // script.strikeDistance from the defender, then strikes.
+  const defenderX = script.strikeDistance / 2
+  const strikeX = -script.strikeDistance / 2
+  const attackerX = strikeX - APPROACH_LENGTH * (1 - engage)
   const fadeAt = script.beats.find((beat) => beat.shot === 'fade-out')?.t ?? script.duration
   const fade = Math.max(
     Math.max(0, 1 - elapsed / 0.35),
@@ -150,13 +158,13 @@ export function BattleTheater({ script, onComplete }) {
       <TheaterActor
         piece={script.actors.attacker}
         action={attackerAction}
-        position={[-2.35 + engage * 1.6, 0.04, 0]}
+        position={[attackerX, 0.04, 0]}
         facing={-Math.PI / 2}
       />
       <TheaterActor
         piece={script.actors.defender}
         action={defenderAction}
-        position={[0.75, 0.04, 0]}
+        position={[defenderX, 0.04, 0]}
         facing={Math.PI / 2}
       />
       <Html fullscreen zIndexRange={[30, 0]} calculatePosition={pinToCanvasCentre}>

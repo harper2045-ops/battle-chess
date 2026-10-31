@@ -25,6 +25,20 @@ const SIGNATURES = [
   },
 ]
 
+/**
+ * Gap between the two fighters' centres when the attacker strikes, in arena units
+ * (1 = one board square). Close enough that the weapon (or the golem's fist) lands on
+ * the defender; longer weapons stand a little further off.
+ */
+export const STRIKE_DISTANCE = Object.freeze({
+  p: 0.6, // spear
+  n: 0.6, // longsword
+  b: 0.5, // mace
+  r: 0.5, // fists
+  q: 0.6, // staff
+  k: 0.65, // greatsword
+})
+
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value))
 }
@@ -111,6 +125,7 @@ export function planBattle(event, { mode = 'full', seed = 0, clipDurations } = {
     duration,
     arena: 'courtyard',
     matchup,
+    strikeDistance: STRIKE_DISTANCE[attacker.type],
     actors: { attacker, defender },
     capture: {
       from: event.from,

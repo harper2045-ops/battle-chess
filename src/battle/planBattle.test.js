@@ -73,6 +73,16 @@ describe('planBattle', () => {
     expect(promotion.matchup).toBe('queen-spell')
   })
 
+  it('closes to striking distance for every attacker, using the promoted type', () => {
+    for (const attacker of TYPES) {
+      const distance = plan(capture(attacker, 'p')).strikeDistance
+      expect(distance).toBeGreaterThan(0.3)
+      expect(distance).toBeLessThan(0.8)
+    }
+    expect(plan(capture('p', 'r', 'w', { promotion: 'q' })).strikeDistance)
+      .toBe(plan(capture('q', 'r')).strikeDistance)
+  })
+
   it('is deterministic for the same seed', () => {
     expect(plan(capture('q', 'k'), 'full', 42)).toEqual(plan(capture('q', 'k'), 'full', 42))
   })
