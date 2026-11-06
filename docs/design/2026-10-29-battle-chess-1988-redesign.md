@@ -431,6 +431,28 @@ The user chose weapons before compression. Loadout (decided here; flag if wrong)
 
 Until generated units exist, the Ivory Kingdom models on `main` are the cast.
 
+### MotionBricks trial (2026-11-06)
+
+[NVlabs/motionbricks](https://github.com/NVlabs/motionbricks) (NVIDIA, SIGGRAPH 2026)
+generates motion between four "context" poses and one to four "target" poses on the
+SOMA skeleton, the same 77-joint skeleton Kimodo writes. Its engines need an NVIDIA GPU
+(TensorRT); the repo's official ONNX route runs on the Mac's CPU with ONNX Runtime.
+`scripts/assets/motionbricks_walkin.py` ports the engine's encode/decode kernels to
+numpy and writes a packed Kimodo clip, so AssetFurnace's `animate_command` puts it on a
+unit like any Kimodo move.
+
+- Checked: Kimodo's world rotations are turns away from the T-pose; MotionBricks' include
+  each joint's rest orientation from its USD skeleton (R_mb = R_kimodo @ W_rest). Without
+  that conversion the start pose is 70° off on average, with it 12°. T-poses match to
+  4.6 cm.
+- First result: idle → 2 m approach → fight stance, 1.9 s, made in about 5 s on the CPU.
+  It looks natural on the white pawn (side-view render, without props).
+- Not in MotionBricks: attacks, hits, deaths. Kimodo keeps those.
+- Licences: code Apache 2.0, model NVIDIA Open Model Agreement (commercial use allowed).
+  The sample BVH clips are evaluation-only; the script never uses them.
+- Open: whether the game should use root motion from the clip (the theater moves the
+  attacker itself today), and whether to swap the cutaway's `walk` for this walk-in.
+
 ## Audio pipeline (from the user's local setup)
 
 - **Music: YuE2-3B in ComfyUI** (`~/ComfyUI`, checkpoint
