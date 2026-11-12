@@ -463,6 +463,17 @@ unit like any Kimodo move.
 - Recommendation: MotionBricks for the approach and the joins (walk in → wind-up,
   follow-through → guard), Kimodo's own clip for the strike itself, so the hit keeps its
   speed.
+- The mix (2026-11-12, now the script's default, `--strike kimodo`): MotionBricks walk-in
+  and wind-up (1.9 s) → Kimodo's own swing frames 10–25 unchanged (0.5 s) → MotionBricks
+  recovery to fight stance (1.0 s); 3.4 s in all. The hand keeps Kimodo's 4.7 m/s. The
+  joins turn about 10° per frame (walk-in → strike) and 16–24° (strike → recovery, with a
+  quick wrist turn up to 42°); the big per-frame jumps (right upper arm 79°, a 167° wrist
+  spin) are inside Kimodo's own swing and already play in today's game attack.
+- Previews: the AssetFurnace GLBs are 24 fps; earlier previews played at 30 fps, about 25%
+  fast (both sides of each comparison equally). `render_motion.py` now keeps 24 fps and
+  aims the camera across the direction of travel.
+- Not done: weapons on in the preview, the other 11 units, and using the clip in the game
+  (needs the root-motion decision above).
 - Open: whether the game should use root motion from the clip (the theater moves the
   attacker itself today), and whether to swap the cutaway's `walk` for this walk-in.
 
