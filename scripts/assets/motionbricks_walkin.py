@@ -209,54 +209,70 @@ def main():
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
 
-    import onnxruntime as ort
-
     c_rot, c_j0, c_hips = load_motion(MOTIONS / f"{args.context}.npz")
     t_rot, t_j0, t_hips = load_motion(MOTIONS / f"{args.target}.npz")
     c_pos = world_positions(c_rot, c_j0, c_hips)[-POSES_PER_TOKEN:]
     c_rot = c_rot[-POSES_PER_TOKEN:]
-    t_pos = world_positions(t_rot, t_j0, t_hips)[:1]
-    t_rot = t_rot[:1]
+    t_pos, t_rot = place_target(world_positions(t_rot, t_j0, t_hips)[:1], t_rot[:1], c_pos, args.distance)
 
-    # Turn the target to the context's facing, then place it `distance` ahead on the ground.
+    generator = Generator(args.precision)
+    tpose = soma_tpose(c_rot[:1], world_positions(c_rot[:1], c_j0, c_hips[-1:]), 0)
+    shape_gap = np.abs((tpose - tpose[0]) - (generator.rest_pos - generator.rest_pos[0])).max()
+    print(f"Kimodo T-pose vs MotionBricks rest: largest joint gap {shape_gap * 100:.1f} cm")
+
+    hips, rots, tokens = generator.generate(c_pos, c_rot, t_pos, t_rot, {int(t) for t in args.tokens.split(",")})
+    save_clip(args.out, hips, rots, c_j0)
+    travel = np.linalg.norm((hips[-1] - hips[0])[[0, 2]])
+    print(f"{args.out}: {tokens} tokens, {len(hips)} frames ({len(hips) / FPS:.2f} s), travel {travel:.2f} m")
+
+
+def place_target(t_pos, t_rot, c_pos, distance):
+    """Turn target poses to the last context pose's facing, `distance` metres ahead of it."""
     face_c = heading(c_pos[-1, RIGHT_LEG], c_pos[-1, LEFT_LEG])
     face_t = heading(t_pos[0, RIGHT_LEG], t_pos[0, LEFT_LEG])
     turn = yaw(face_c - face_t)
     ahead = np.array([np.sin(face_c), 0.0, np.cos(face_c)])
     t_ground = np.array([t_pos[0, 0, 0], 0.0, t_pos[0, 0, 2]])
     c_ground = np.array([c_pos[-1, 0, 0], 0.0, c_pos[-1, 0, 2]])
-    t_pos = np.einsum("ab,tjb->tja", turn, t_pos - t_ground) + c_ground + args.distance * ahead
-    t_rot = np.einsum("ab,tjbc->tjac", turn, t_rot)
+    return (np.einsum("ab,tjb->tja", turn, t_pos - t_ground) + c_ground + distance * ahead,
+            np.einsum("ab,tjbc->tjac", turn, t_rot))
 
-    rest_rot, rest_pos = rest_world()
-    tpose = soma_tpose(c_rot[:1], c_pos[:1] * 0 + world_positions(c_rot[:1], c_j0, c_hips[-1:])[:1], 0)
-    shape_gap = np.abs((tpose - tpose[0]) - (rest_pos - rest_pos[0])).max()
-    print(f"Kimodo T-pose vs MotionBricks rest: largest joint gap {shape_gap * 100:.1f} cm")
 
-    pos = np.concatenate([c_pos, np.repeat(t_pos, POSES_PER_TOKEN, 0)])  # pad_token_poses_kernel
-    rot = np.concatenate([c_rot, np.repeat(t_rot, POSES_PER_TOKEN, 0)])
-    inputs, alignment = encode(pos, rot @ rest_rot, num_targets=1)
-    allowed = {int(t) for t in args.tokens.split(",")}
-    inputs["allowed_pred_num_tokens"] = np.array([[1 if 6 + i in allowed else 0 for i in range(11)]], np.int32)
+class Generator:
+    """One ONNX Runtime session; generate() is one MotionBricks call in Kimodo's convention."""
 
-    session = ort.InferenceSession(str(ONNX_DIR / f"mmm_v6_soma_{args.precision}.onnx"),
-                                   providers=["CPUExecutionProvider"])
-    outputs = dict(zip([o.name for o in session.get_outputs()], session.run(None, inputs)))
-    tokens = int(outputs["pred_num_tokens"][0])
-    hips, model_rots = decode(outputs["pred_global_motions"][0], tokens, alignment)
-    model_rots = model_rots @ np.transpose(rest_rot[MODEL_INDEX], (0, 2, 1))  # back to Kimodo's
-    rots = full_skeleton(model_rots, c_rot[-1])
-    raw_start = np.degrees(np.arccos(np.clip((np.einsum("jab,jab->j", rots[0], c_rot[-1]) - 1) / 2, -1, 1))).max()
-    hips, rots = endpoint_correct(hips, rots, c_pos[-1, 0], c_rot[-1], t_pos[0, 0], t_rot[0])
+    def __init__(self, precision="fp32"):
+        import onnxruntime as ort
 
-    # Packed Kimodo clip: world rotations as fp16 quaternions, frame-0 joints, hips track.
-    joints0 = world_positions(rots[:1], c_j0, hips[:1])[0]
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(args.out, quats=matrices_to_quaternions(rots).astype(np.float16),
+        self.rest_rot, self.rest_pos = rest_world()
+        self.session = ort.InferenceSession(str(ONNX_DIR / f"mmm_v6_soma_{precision}.onnx"),
+                                            providers=["CPUExecutionProvider"])
+
+    def generate(self, c_pos, c_rot, t_pos, t_rot, allowed_tokens):
+        """Four context poses + one to four target poses -> (hips [T,3], world rotations
+        [T,77,3,3], token count), endpoint-corrected to the last context and first target pose."""
+        n = len(t_pos)
+        pad = [min(i, n - 1) for i in range(POSES_PER_TOKEN)]  # pad_token_poses_kernel
+        pos = np.concatenate([c_pos, t_pos[pad]])
+        rot = np.concatenate([c_rot, t_rot[pad]])
+        inputs, alignment = encode(pos, rot @ self.rest_rot, num_targets=n)
+        inputs["allowed_pred_num_tokens"] = np.array(
+            [[1 if 6 + i in allowed_tokens else 0 for i in range(11)]], np.int32)
+        outputs = dict(zip([o.name for o in self.session.get_outputs()], self.session.run(None, inputs)))
+        tokens = int(outputs["pred_num_tokens"][0])
+        hips, model_rots = decode(outputs["pred_global_motions"][0], tokens, alignment)
+        model_rots = model_rots @ np.transpose(self.rest_rot[MODEL_INDEX], (0, 2, 1))  # back to Kimodo's
+        rots = full_skeleton(model_rots, c_rot[-1])
+        hips, rots = endpoint_correct(hips, rots, c_pos[-1, 0], c_rot[-1], t_pos[0, 0], t_rot[0])
+        return hips, rots, tokens
+
+
+def save_clip(path, hips, rots, joints0_source):
+    """Packed Kimodo clip: world rotations as fp16 quaternions, frame-0 joints, hips track."""
+    joints0 = world_positions(rots[:1], joints0_source, hips[:1])[0]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(path, quats=matrices_to_quaternions(rots).astype(np.float16),
                         joints0=joints0.astype(np.float32), hips=hips.astype(np.float32), fps=np.float32(FPS))
-    travel = np.linalg.norm((hips[-1] - hips[0])[[0, 2]])
-    print(f"{args.out}: {tokens} tokens, {len(hips)} frames ({len(hips) / FPS:.2f} s), "
-          f"travel {travel:.2f} m, raw start error {raw_start:.1f} deg before correction")
 
 
 if __name__ == "__main__":

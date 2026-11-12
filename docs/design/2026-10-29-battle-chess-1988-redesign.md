@@ -450,6 +450,13 @@ unit like any Kimodo move.
 - Not in MotionBricks: attacks, hits, deaths. Kimodo keeps those.
 - Licences: code Apache 2.0, model NVIDIA Open Model Agreement (commercial use allowed).
   The sample BVH clips are evaluation-only; the script never uses them.
+- The walk-in hops: ending in the low fight stance after 2 m in 1.9 s, both feet leave the
+  ground by ~10 cm for a third of a second. Aim at a standing pose or give it more time.
+- Fight test (2026-11-12, `scripts/assets/motionbricks_fight.py`): three chained
+  generations through Kimodo sword-swing key poses: walk 1.2 m in and raise the sword
+  (1.9 s), strike (0.6 s, the part MotionBricks has to invent), recover to fight stance
+  (1.0 s). The sword hand goes 1.58 m → 0.79 m, the same path as Kimodo's swing
+  (1.61 → 0.79), but slower at the peak (3.0 m/s vs 4.7). Not yet watched as video.
 - Open: whether the game should use root motion from the clip (the theater moves the
   attacker itself today), and whether to swap the cutaway's `walk` for this walk-in.
 
