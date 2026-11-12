@@ -472,8 +472,16 @@ unit like any Kimodo move.
 - Previews: the AssetFurnace GLBs are 24 fps; earlier previews played at 30 fps, about 25%
   fast (both sides of each comparison equally). `render_motion.py` now keeps 24 fps and
   aims the camera across the direction of travel.
-- Not done: weapons on in the preview, the other 11 units, and using the clip in the game
-  (needs the root-motion decision above).
+- All 12 units (2026-11-12, `scripts/assets/make_fight_clips.py`): each unit's own attack
+  and speed, as in `make_moves.py`. Swords: walk 1.2 m + `sword_swing` frames 10–25 at
+  1.3× + recovery = 3.3 s. Rook golems: walk 0.5 m + the whole `punch_combo` (frames
+  12–79, steps ~1.3 m on its own) at 1.2× + recovery = 4.7 s. One SOMA clip per attack,
+  retargeted to every unit in 13 s; output
+  `~/image-to-3dlab/output/armies-final/moves/<unit>_fight.glb`. All 12 checked in a
+  side-view grid video: no broken poses. The golem walk-in is slow (1.9 s for 0.5 m)
+  because MotionBricks picked the longest length allowed.
+- Not done: weapons in the preview, and using the clips in the game (not packed into
+  `public/models/armies/` yet; needs the root-motion decision above).
 - Open: whether the game should use root motion from the clip (the theater moves the
   attacker itself today), and whether to swap the cutaway's `walk` for this walk-in.
 
