@@ -456,7 +456,13 @@ unit like any Kimodo move.
   generations through Kimodo sword-swing key poses: walk 1.2 m in and raise the sword
   (1.9 s), strike (0.6 s, the part MotionBricks has to invent), recover to fight stance
   (1.0 s). The sword hand goes 1.58 m → 0.79 m, the same path as Kimodo's swing
-  (1.61 → 0.79), but slower at the peak (3.0 m/s vs 4.7). Not yet watched as video.
+  (1.61 → 0.79), but slower at the peak (3.0 m/s vs 4.7). Watched as side-view video
+  (`scripts/assets/render_motion.py`): it reads as one continuous approach, overhead
+  strike and guard, with no hop at 1.2 m; the strike is softer than Kimodo's and the
+  raised arm looks a little loose.
+- Recommendation: MotionBricks for the approach and the joins (walk in → wind-up,
+  follow-through → guard), Kimodo's own clip for the strike itself, so the hit keeps its
+  speed.
 - Open: whether the game should use root motion from the clip (the theater moves the
   attacker itself today), and whether to swap the cutaway's `walk` for this walk-in.
 
