@@ -36,6 +36,9 @@ ATTACKS = {
     # the walk-in is shorter.
     "punch_combo": (slice(12, 80), 0.5),
 }
+# With `--clip` (a unit's own attack from make_unit_attacks.py) the whole clip is the strike,
+# and the walk-in is whatever it takes to cover this much ground in total.
+TOTAL_APPROACH = 1.6
 
 
 def clip_poses(name):
@@ -62,6 +65,7 @@ def speed_up(rot, hips, speed):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--attack", choices=sorted(ATTACKS), default="sword_swing")
+    parser.add_argument("--clip", type=Path, help="a packed Kimodo attack to use whole, instead of --attack")
     parser.add_argument("--speed", type=float, default=1.0, help="play the strike this much faster")
     parser.add_argument("--distance", type=float, help="metres to walk in (default: per attack)")
     parser.add_argument("--strike", choices=["kimodo", "motionbricks"], default="kimodo",
@@ -71,10 +75,16 @@ def main():
     args = parser.parse_args()
 
     gen = Generator()
-    swing, walk_in = ATTACKS[args.attack]
+    if args.clip:
+        a_rot, _, a_hips = load_motion(args.clip)
+        swing = slice(0, len(a_rot))
+        travel = np.linalg.norm((a_hips[-1] - a_hips[0])[[0, 2]])  # SOMA is Y-up
+        walk_in = max(0.4, TOTAL_APPROACH - travel)
+    else:
+        a_rot, _, a_hips = load_motion(MOTIONS / f"{args.attack}.npz")
+        swing, walk_in = ATTACKS[args.attack]
     distance = walk_in if args.distance is None else args.distance
     idle_pos, idle_rot, j0 = clip_poses("idle")
-    a_rot, _, a_hips = load_motion(MOTIONS / f"{args.attack}.npz")
     a_rot, a_hips = speed_up(a_rot[swing], a_hips[swing], args.speed)
     swing_pos, swing_rot = world_positions(a_rot, j0, a_hips), a_rot
     swing = slice(0, len(a_rot))

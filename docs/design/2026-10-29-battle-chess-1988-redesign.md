@@ -480,6 +480,25 @@ unit like any Kimodo move.
   `~/image-to-3dlab/output/armies-final/moves/<unit>_fight.glb`. All 12 checked in a
   side-view grid video: no broken poses. The golem walk-in is slow (1.9 s for 0.5 m)
   because MotionBricks picked the longest length allowed.
+- Own attack per piece (2026-11-16, user: "they need different motions not all the same"):
+  `scripts/assets/make_unit_attacks.py` makes six new Kimodo attacks, two takes each (take
+  0 white, take 1 black), so no two units share a motion. Prompts: pawn two-handed spear
+  thrusts; knight shield bash then sword slash; bishop one-handed mace smash; queen staff
+  raised then thrust forward to cast; king two-handed overhead cleave; rook golem two-fist
+  slam. Kimodo-SOMA-RP-v1.2, seed 1, 3–3.5 s; prompts and takes in
+  `armies-final/attacks/attacks.json`. Different pieces' attacks differ by 50–100° per
+  joint on average, the two takes of a piece by 22–52°.
+  `make_fight_clips.py` now uses each unit's own clip whole as the strike at 1.2×, with a
+  walk-in that makes up 1.6 m of approach (`--shared` keeps the earlier sword/punch
+  version). Clips are 5.4–5.8 s, longer than before, because Kimodo's clips start and end
+  in a short stand.
+- Kimodo on this Mac (`~/kimodo`): CPU only, ~50 s per 3 s clip, ~7 min for all twelve
+  takes. Kimodo only uses NVIDIA GPUs or the CPU; the text encoder (Llama 3 8B via
+  LLM2Vec) is forced to the CPU too. Its foot-slide cleanup (MotionCorrection, C++) is
+  written for Intel SSE/AVX and does not build on Apple Silicon, so clips are made with
+  `--no-postprocess`; Kimodo runs from its folder with its PyPI dependencies. A port
+  needs the sse2neon header (not installed). `render_motion.py` now renders with Cycles on
+  the CPU, since EEVEE always uses the GPU.
 - Not done: weapons in the preview, and using the clips in the game (not packed into
   `public/models/armies/` yet; needs the root-motion decision above).
 - Open: whether the game should use root motion from the clip (the theater moves the

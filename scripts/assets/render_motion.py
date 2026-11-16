@@ -1,4 +1,4 @@
-"""Render an animated GLB from the side as a PNG sequence, camera fixed and fitted to the whole motion.
+"""Render an animated GLB from the side as a PNG sequence, camera fixed and fitted to the whole motion (CPU only).
 
 Used to compare moves (Kimodo vs MotionBricks) frame by frame:
     /Applications/Blender.app/Contents/MacOS/Blender -b -P scripts/assets/render_motion.py -- \
@@ -18,9 +18,13 @@ out_dir.mkdir(parents=True, exist_ok=True)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
-engines = {e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items}
-scene.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in engines else "BLENDER_EEVEE"
-scene.render.resolution_x, scene.render.resolution_y = 720, 540
+# Cycles on the CPU only: EEVEE always renders on the GPU, which may be busy with video generation.
+scene.render.engine = "CYCLES"
+bpy.context.preferences.addons["cycles"].preferences.compute_device_type = "NONE"
+scene.cycles.device = "CPU"
+scene.cycles.samples = 16
+scene.cycles.use_denoising = True
+scene.render.resolution_x, scene.render.resolution_y = 480, 360
 world = bpy.data.worlds.new("w")
 world.color = (0.12, 0.13, 0.16)
 scene.world = world
