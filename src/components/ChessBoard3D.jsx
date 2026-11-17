@@ -17,6 +17,7 @@ import {
 import { FantasyPiece } from './FantasyPiece.jsx'
 import { BattleTheater } from './BattleTheater.jsx'
 import { planBattle } from '../battle/planBattle.js'
+import fightTiming from '../battle/fightTiming.json'
 import { unitKey } from '../battle/units.js'
 import { useUnit } from '../battle/useUnit.js'
 import {
@@ -343,15 +344,17 @@ function BattleCapture({ event, mode, onComplete }) {
   const defender = useUnit(event.defender)
   const complete = useCallback(() => onComplete(event.id), [event.id, onComplete])
   const script = useMemo(() => {
-    const durations = (animations) => Object.fromEntries(
-      animations.map((clip) => [clip.name, clip.duration]),
-    )
+    // Clip lengths from the GLB, plus where each fight clip's blow lands (fightTiming.json).
+    const durations = (animations, piece) => ({
+      ...Object.fromEntries(animations.map((clip) => [clip.name, clip.duration])),
+      fightHit: fightTiming[unitKey(piece)]?.hit,
+    })
     return planBattle(event, {
       mode,
       seed: event.id,
       clipDurations: {
-        [unitKey(attackerPiece)]: durations(attacker.animations),
-        [unitKey(event.defender)]: durations(defender.animations),
+        [unitKey(attackerPiece)]: durations(attacker.animations, attackerPiece),
+        [unitKey(event.defender)]: durations(defender.animations, event.defender),
       },
     })
   }, [event, mode, attackerPiece, attacker.animations, defender.animations])

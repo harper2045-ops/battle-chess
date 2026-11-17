@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Html } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat, Vector3 } from 'three'
@@ -17,8 +17,25 @@ const SHOTS = {
   'fade-out': { position: [0, 2.6, 6.2], target: [0, 0.65, 0] },
 }
 
-/** How far the attacker walks in before reaching striking distance. */
+/** How far the attacker walks in before reaching striking distance (walk + attack only). */
 const APPROACH_LENGTH = 1.6
+
+/**
+ * Where an actor's root bone (the hips) is along X, relative to the actor's own group,
+ * at `time` into `clip`. Played on a throwaway mixer so the visible one is untouched.
+ */
+function rootOffsetAt(actor, group, clip, time) {
+  const root = actor.getObjectByProperty('isBone', true)
+  if (!root) return 0
+  const probe = new AnimationMixer(actor)
+  probe.clipAction(clip).play()
+  probe.setTime(time)
+  group.updateWorldMatrix(true, true)
+  const offset = root.getWorldPosition(new Vector3()).x - group.getWorldPosition(new Vector3()).x
+  probe.stopAllAction()
+  probe.uncacheRoot(actor)
+  return offset
+}
 
 /**
  * drei's fullscreen Html centres itself on the projected world origin, which moves
@@ -48,7 +65,12 @@ function TheaterCamera({ shot }) {
   return null
 }
 
-function TheaterActor({ piece, action, position, facing }) {
+/**
+ * One fighter. `anchor` ({ clip, time, x }) is for clips that move the body themselves
+ * (root motion, like the fight clip's walk-in): the actor is placed so its hips are at
+ * x when the clip reaches `time`, instead of being slid around by the theater.
+ */
+function TheaterActor({ piece, action, position, facing, timeScale = 1, anchor = null }) {
   const { scene, animations, props, propScenes } = useUnit(piece)
   const actor = useMemo(() => {
     const instance = clone(scene)
@@ -57,6 +79,17 @@ function TheaterActor({ piece, action, position, facing }) {
     return instance
   }, [scene, piece.type, props, propScenes])
   const mixer = useMemo(() => new AnimationMixer(actor), [actor])
+  const group = useRef()
+  const [shift, setShift] = useState(0)
+  const anchorClip = anchor && AnimationClip.findByName(animations, anchor.clip)
+
+  // Measured before paint, so the first frame already stands where the walk-in starts.
+  useLayoutEffect(() => {
+    if (!anchorClip || !group.current) return
+    const offset = rootOffsetAt(actor, group.current, anchorClip, anchor.time)
+    setShift(anchor.x - position[0] - offset)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- measure once per clip/target
+  }, [actor, anchorClip, anchor?.time, anchor?.x])
 
   useEffect(() => {
     const clip = AnimationClip.findByName(animations, action)
@@ -67,14 +100,15 @@ function TheaterActor({ piece, action, position, facing }) {
     const looping = action === 'idle' || action === 'walk'
     clipAction.clampWhenFinished = !looping
     clipAction.setLoop(looping ? LoopRepeat : LoopOnce, looping ? Infinity : 1)
+    clipAction.timeScale = timeScale
     clipAction.play()
     return () => clipAction.stop()
-  }, [action, animations, mixer])
+  }, [action, animations, mixer, timeScale])
 
   useFrame((_, delta) => mixer.update(delta))
 
   return (
-    <group position={position} rotation-y={facing}>
+    <group ref={group} position={[position[0] + shift, position[1], position[2]]} rotation-y={facing}>
       <group rotation-y={MODEL_TURN}>
         <primitive object={actor} dispose={null} />
       </group>
@@ -131,13 +165,19 @@ export function BattleTheater({ script, onComplete }) {
     (beat) => beat.shot,
     { shot: 'wide-two-shot' },
   ).shot
-  const engageAt = script.beats.find((beat) => beat.actor === 'attacker' && beat.clip === 'attack')?.t ?? 1
-  const engage = Math.min(1, elapsed / engageAt)
-  // The fighters meet at the arena centre: the attacker walks in until it is
+  // The fighters meet at the arena centre: the attacker closes until it is
   // script.strikeDistance from the defender, then strikes.
   const defenderX = script.strikeDistance / 2
   const strikeX = -script.strikeDistance / 2
-  const attackerX = strikeX - APPROACH_LENGTH * (1 - engage)
+  // A fight clip walks the attacker in itself; it stands still and is placed so its hips
+  // reach strikeX as the blow lands. Otherwise the theater slides it in during the walk.
+  const engageAt = script.beats.find((beat) => beat.actor === 'attacker' && beat.clip === 'attack')?.t ?? 1
+  const engage = Math.min(1, elapsed / engageAt)
+  const attackerX = script.fight ? strikeX : strikeX - APPROACH_LENGTH * (1 - engage)
+  const anchor = useMemo(
+    () => script.fight && { clip: 'fight', time: script.fight.hitTime, x: strikeX },
+    [script.fight, strikeX],
+  )
   const fadeAt = script.beats.find((beat) => beat.shot === 'fade-out')?.t ?? script.duration
   const fade = Math.max(
     Math.max(0, 1 - elapsed / 0.35),
@@ -160,6 +200,8 @@ export function BattleTheater({ script, onComplete }) {
         action={attackerAction}
         position={[attackerX, 0.04, 0]}
         facing={-Math.PI / 2}
+        timeScale={script.fight?.speed ?? 1}
+        anchor={anchor}
       />
       <TheaterActor
         piece={script.actors.defender}

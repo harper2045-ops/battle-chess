@@ -10,6 +10,7 @@ final rigged GLB. Run with AssetFurnace's venv:
 Writes ~/image-to-3dlab/output/armies-final/moves/<unit>_fight.glb.
 """
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -26,6 +27,10 @@ OUT = FINAL / "moves"
 CLIPS = FINAL / "fight-clips"
 ATTACK_CLIPS = FINAL / "attacks"  # make_unit_attacks.py
 UNIT_SPEED = 1.2  # own attacks play this much faster, like the presets (1.2-1.3)
+# How the blow lands, for finding the hit moment: thrusts reach furthest, swings peak in speed.
+HIT_KIND = {"p": "thrust", "q": "thrust", "n": "swing", "b": "swing", "k": "swing", "r": "swing"}
+# When each unit's fight clip lands its blow, for the battle theater (planBattle).
+TIMING = HERE.parents[1] / "src" / "battle" / "fightTiming.json"
 UNITS = [f"{a}_{r}" for a in "wb" for r in "pnbrqk"]
 # attack preset -> speed, matching make_moves.py's MOVES["attack"] and GOLEM_ATTACK
 ATTACKS = {"sword_swing": 1.3, "punch_combo": 1.2}
@@ -75,8 +80,13 @@ def main():
         made = {a: make_clip(a, ["--attack", a, "--speed", str(ATTACKS[a])]) for a in {attack_for(u) for u in units}}
         jobs = [(u, made[attack_for(u)], attack_for(u)) for u in units]
     else:
-        jobs = [(u, make_clip(u, ["--clip", str(own_attack(u)), "--speed", str(UNIT_SPEED)]), own_attack(u).stem)
+        jobs = [(u, make_clip(u, ["--clip", str(own_attack(u)), "--speed", str(UNIT_SPEED),
+                                  "--hit", HIT_KIND[u.split("_")[1]]]), own_attack(u).stem)
                 for u in units]
+        timing = json.loads(TIMING.read_text()) if TIMING.exists() else {}
+        for unit, clip, _ in jobs:
+            timing[unit] = json.loads(clip.with_suffix(".json").read_text())
+        TIMING.write_text(json.dumps(dict(sorted(timing.items())), indent=2) + "\n")
     with ThreadPoolExecutor(args.jobs) as pool:
         results = list(pool.map(lambda job: retarget(*job), jobs))
     print(f"ALL DONE: {sum(results)}/{len(results)} ok", flush=True)

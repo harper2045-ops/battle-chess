@@ -499,10 +499,26 @@ unit like any Kimodo move.
   `--no-postprocess`; Kimodo runs from its folder with its PyPI dependencies. A port
   needs the sse2neon header (not installed). `render_motion.py` now renders with Cycles on
   the CPU, since EEVEE always uses the GPU.
-- Not done: weapons in the preview, and using the clips in the game (not packed into
-  `public/models/armies/` yet; needs the root-motion decision above).
-- Open: whether the game should use root motion from the clip (the theater moves the
-  attacker itself today), and whether to swap the cutaway's `walk` for this walk-in.
+- In the game (2026-11-16, user: "do all four steps"):
+  - Trim: `motionbricks_fight.py --clip` cuts each Kimodo attack's stand before and after
+    the motion (smoothed joint turning under 20% of its peak, 6 frames lead, 8 tail,
+    always keeping the hit). Clips are now 4.0–5.6 s (were 5.4–5.8); several attacks
+    move almost to their last frame, so little was cut there.
+  - Root motion (decided): the fight clip moves the attacker. The theater no longer slides
+    it; it places the attacker once, measured on a throwaway mixer, so the clip's hips
+    reach striking distance exactly when the blow lands. Units without a fight clip keep
+    the old walk loop + slide + attack.
+  - Packed: `pack_units.py` adds a `fight` clip to every unit GLB (+~1 MB in all).
+  - Hit timing: `make_fight_clips.py` writes `src/battle/fightTiming.json` (clip length,
+    blow time, hips travel). Thrusts (pawn spear, queen cast) land at the hand's furthest
+    reach; swings (knight, bishop, king, golem) two frames after the fastest hand.
+    `planBattle` plays `fight` from t = 0, puts the defender's hit on the blow and the
+    close-up 0.8 s before it; Short battles play the clip 1.8× (`SHORT_FIGHT_SPEED`).
+    Full battles may now run to 8 s (was 6) because the walk-in is part of the clip; the
+    queen's slow raise puts her blow at 4.4 s (white) and 3.6 s (black).
+  - Checked in the browser: white pawn ×d5 and black queen ×d5 walk in, and the spear and
+    the staff meet the defender as it reacts.
+- Not done: the slow golem walk-in; whether to shorten the queen's wind-up.
 
 ## Audio pipeline (from the user's local setup)
 

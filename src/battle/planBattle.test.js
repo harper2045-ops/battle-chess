@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { planBattle } from './planBattle.js'
+import fightTiming from './fightTiming.json'
 
 const TYPES = ['p', 'n', 'b', 'r', 'q', 'k']
 const CLIP_DURATIONS = Object.fromEntries(
@@ -85,6 +86,66 @@ describe('planBattle', () => {
 
   it('is deterministic for the same seed', () => {
     expect(plan(capture('q', 'k'), 'full', 42)).toEqual(plan(capture('q', 'k'), 'full', 42))
+  })
+
+  describe('with a fight clip (walk-in, own attack and recovery in one clip)', () => {
+    const WITH_FIGHT = structuredClone(CLIP_DURATIONS)
+    for (const [key, timing] of Object.entries(fightTiming)) {
+      WITH_FIGHT[key].fight = timing.duration
+      WITH_FIGHT[key].fightHit = timing.hit
+    }
+    const fightPlan = (event, mode = 'full', seed = 7) =>
+      planBattle(event, { mode, seed, clipDurations: WITH_FIGHT })
+
+    it.each(['full', 'short'])('plays the fight clip and lands the hit on its blow in %s mode', (mode) => {
+      for (const color of ['w', 'b']) {
+        for (const attacker of TYPES) {
+          for (const defender of TYPES) {
+            const script = fightPlan(capture(attacker, defender, color), mode)
+            const attackerBeats = script.beats.filter((beat) => beat.actor === 'attacker')
+            expect(attackerBeats.map((beat) => beat.clip)).toEqual(['fight'])
+            const hit = script.beats.find((beat) => beat.actor === 'defender' && beat.clip === 'hit')
+            const blow = fightTiming[`${color}_${attacker}`].hit
+            expect(hit.t).toBeCloseTo(blow / script.fight.speed, 2)
+            expect(script.fight.hitTime).toBe(blow)
+            const defenderBeats = script.beats.filter((beat) => beat.actor === 'defender')
+            expect(defenderBeats.at(-1).clip).toBe('death')
+            script.beats.forEach((beat, index) => {
+              expect(beat.t).toBeGreaterThanOrEqual(0)
+              expect(beat.t).toBeLessThanOrEqual(script.duration)
+              if (index > 0) expect(beat.t).toBeGreaterThanOrEqual(script.beats[index - 1].t)
+            })
+            expect(script.duration).toBeLessThanOrEqual(mode === 'full' ? 8 : 4)
+          }
+        }
+      }
+    })
+
+    it('plays faster and ends sooner in short mode', () => {
+      const event = capture('q', 'p')
+      const full = fightPlan(event, 'full')
+      const short = fightPlan(event, 'short')
+      expect(full.fight.speed).toBe(1)
+      expect(short.fight.speed).toBeGreaterThan(1)
+      expect(short.duration).toBeLessThan(full.duration)
+    })
+
+    it('falls back to walk and attack when the attacker has no fight clip', () => {
+      const partial = structuredClone(WITH_FIGHT)
+      delete partial.w_n.fight
+      const script = planBattle(capture('n', 'p'), { mode: 'full', seed: 7, clipDurations: partial })
+      expect(script.fight).toBeNull()
+      expect(script.beats.filter((beat) => beat.actor === 'attacker').map((beat) => beat.clip))
+        .toEqual(['walk', 'attack'])
+    })
+
+    it('has a blow inside every packed fight clip', () => {
+      expect(Object.keys(fightTiming)).toHaveLength(12)
+      for (const timing of Object.values(fightTiming)) {
+        expect(timing.hit).toBeGreaterThan(0)
+        expect(timing.hit).toBeLessThan(timing.duration)
+      }
+    })
   })
 
   it('uses supplied clip durations rather than hard-coded animation lengths', () => {

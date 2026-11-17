@@ -22,7 +22,7 @@ const MODEL_ROOT = '/models/armies'
 export const MODEL_TURN = Math.PI
 
 /** Clip names inside every unit GLB (scripts/assets/pack_units.py). */
-export const CLIPS = ['idle', 'attack', 'hit', 'death', 'walk']
+export const CLIPS = ['idle', 'attack', 'hit', 'death', 'walk', 'fight']
 
 export function unitKey(piece) {
   return `${piece.color}_${piece.type}`

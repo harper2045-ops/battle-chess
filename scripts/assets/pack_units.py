@@ -2,8 +2,9 @@
 
 Run with Blender:
     Blender -b -P scripts/assets/pack_units.py [-- w_p,b_r]
-Loads <unit>_idle.glb (mesh + idle), takes the action from each move GLB made by
-make_moves.py (same skeleton), names the clips idle / attack / hit / death / walk, and
+Loads <unit>_idle.glb (mesh + idle), takes the action from each move GLB made by make_moves.py
+and make_fight_clips.py (same skeleton), names the clips idle / attack / hit / death / walk /
+fight, and
 exports public/models/armies/<unit>.glb for the game, web-sized: textures shrunk to
 1024 px WebP and the mesh Draco-compressed (three.js's own decoder, served from
 public/draco/). Props are not baked in: the game attaches them from loadout.json so
@@ -18,7 +19,7 @@ FINAL = Path.home() / "image-to-3dlab" / "output" / "armies-final"
 GAME = Path(__file__).resolve().parents[2] / "public" / "models" / "armies"
 TEXTURE = 1024
 UNITS = [f"{a}_{r}" for a in "wb" for r in "pnbrqk"]
-MOVES = ["attack", "hit", "death", "walk"]
+MOVES = ["attack", "hit", "death", "walk", "fight"]  # fight: make_fight_clips.py
 
 
 def import_glb(path):
